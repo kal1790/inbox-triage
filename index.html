@@ -3,623 +3,349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inbox Triage</title>
+<title>Inbox Briefing</title>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
-  /* ── Tokens ── */
-  :root {
-    --bg:           #f5f5f7;
-    --surface:      #ffffff;
-    --surface2:     #f1f3f4;
-    --text:         #1d1d1f;
-    --text2:        #3c4043;
-    --text3:        #5f6368;
-    --text4:        #86868b;
-    --border:       #f0f0f5;
-    --border2:      #d2d2d7;
-    --shadow:       rgba(0,0,0,0.07);
-    --shadow-h:     rgba(0,0,0,0.12);
-    --blue:         #1a73e8;
-    --blue-bg:      #e8f0fe;
-    --red:          #d93025;
-    --red-bg:       #fce8e6;
-    --green:        #188038;
-    --green-bg:     #e8f4ea;
-    --orange:       #e65100;
-    --orange-bg:    #fff3e0;
-    --grey-bg:      #f1f3f4;
-    --purple:       #7b1fa2;
-    --purple-bg:    #f3e5f5;
-    --purple-border:#e1bee7;
-    --overlay:      rgba(0,0,0,0.4);
-  }
-  [data-theme="dark"] {
-    --bg:           #111113;
-    --surface:      #1c1c1e;
-    --surface2:     #2c2c2e;
-    --text:         #f2f2f7;
-    --text2:        #d1d1d6;
-    --text3:        #aeaeb2;
-    --text4:        #636366;
-    --border:       #2c2c2e;
-    --border2:      #3a3a3c;
-    --shadow:       rgba(0,0,0,0.4);
-    --shadow-h:     rgba(0,0,0,0.6);
-    --blue:         #4a9eff;
-    --blue-bg:      #1a2a3d;
-    --red:          #ff6b6b;
-    --red-bg:       #3d1a1a;
-    --green:        #4caf77;
-    --green-bg:     #1a3d27;
-    --orange:       #ffab70;
-    --orange-bg:    #3d2a1a;
-    --grey-bg:      #2c2c2e;
-    --purple:       #cf9af0;
-    --purple-bg:    #2d1a3d;
-    --purple-border:#5c3a7a;
-    --overlay:      rgba(0,0,0,0.7);
-  }
+:root {
+  --bg:       #f0f0f5;
+  --surface:  #ffffff;
+  --surface2: #f5f5f7;
+  --text:     #1d1d1f;
+  --text2:    #3c4043;
+  --text3:    #6e6e73;
+  --border:   #e0e0e8;
+  --blue:     #1a73e8;
+  --blue-bg:  #e8f0fe;
+  --red:      #c5221f;
+  --red-bg:   #fce8e6;
+  --amber:    #b06000;
+  --amber-bg: #fff3e0;
+  --green:    #1e7e34;
+  --green-bg: #e8f5e9;
+  --shadow:   0 1px 4px rgba(0,0,0,.08), 0 2px 12px rgba(0,0,0,.05);
+  --radius:   14px;
+}
+[data-theme="dark"] {
+  --bg:       #0d0d0f;
+  --surface:  #1c1c1e;
+  --surface2: #2c2c2e;
+  --text:     #f2f2f7;
+  --text2:    #d1d1d6;
+  --text3:    #8e8e93;
+  --border:   #3a3a3c;
+  --blue:     #4da3ff;
+  --blue-bg:  #1a2a3d;
+  --red:      #ff6b6b;
+  --red-bg:   #3d1a1a;
+  --amber:    #ffb347;
+  --amber-bg: #3d2a00;
+  --green:    #5dd87a;
+  --green-bg: #1a3d20;
+  --shadow:   0 1px 4px rgba(0,0,0,.4), 0 2px 12px rgba(0,0,0,.3);
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 14px;
-    line-height: 1.5;
-    transition: background 0.2s, color 0.2s;
-  }
+/* ── Screens ── */
+.screen { display: none; min-height: 100vh; align-items: center; justify-content: center;
+  padding: 24px; flex-direction: column; }
+.screen.active { display: flex; }
 
-  /* ── Screens ── */
-  .screen { display: none; }
-  .screen.active { display: flex; }
+/* ── Setup ── */
+.setup-card { background: var(--surface); border-radius: var(--radius); padding: 36px;
+  max-width: 440px; width: 100%; box-shadow: var(--shadow); }
+.setup-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.setup-card .sub { font-size: 14px; color: var(--text3); margin-bottom: 28px; line-height: 1.5; }
+.field-label { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 6px; }
+.field-input { width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 11px 14px; font-size: 14px; color: var(--text); background: var(--surface);
+  outline: none; margin-bottom: 20px; transition: border-color .15s; }
+.field-input:focus { border-color: var(--blue); }
+.setup-help { font-size: 12px; color: var(--text3); margin-top: -14px; margin-bottom: 20px; }
+.setup-help a { color: var(--blue); }
+.btn-primary { width: 100%; padding: 13px; background: var(--blue); color: #fff;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-primary:hover { opacity: .88; }
+.btn-primary:disabled { opacity: .45; cursor: default; }
 
-  #setupScreen, #signInScreen {
-    flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 40px 20px;
-  }
+/* ── Sign-in ── */
+.signin-card { background: var(--surface); border-radius: var(--radius); padding: 48px 36px;
+  max-width: 380px; width: 100%; box-shadow: var(--shadow); text-align: center; }
+.app-icon { font-size: 48px; margin-bottom: 16px; }
+.signin-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.signin-card p { font-size: 14px; color: var(--text3); margin-bottom: 28px; line-height: 1.5; }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 13px; border: 1.5px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .15s; }
+.google-btn:hover { background: var(--surface2); }
+.google-btn:disabled { opacity: .45; cursor: default; }
+.g-logo { width: 18px; height: 18px; }
 
-  .auth-card {
-    background: var(--surface); border-radius: 20px; padding: 40px;
-    max-width: 440px; width: 100%;
-    box-shadow: 0 4px 24px var(--shadow); text-align: center;
-  }
-  .auth-card .logo { font-size: 48px; margin-bottom: 16px; }
-  .auth-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .auth-card p { font-size: 14px; color: var(--text3); margin-bottom: 24px; line-height: 1.5; }
+/* ── Loading ── */
+.loading-card { text-align: center; }
+.loading-card .pulse { font-size: 52px; animation: pulse 1.6s ease-in-out infinite; margin-bottom: 20px; }
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.7} }
+.loading-step { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.loading-sub { font-size: 13px; color: var(--text3); }
+.loading-dots span { animation: blink 1.4s infinite; }
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
 
-  .input-group { text-align: left; margin-bottom: 20px; }
-  .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
-  .input-group input {
-    width: 100%; padding: 10px 14px; border-radius: 10px;
-    border: 1.5px solid var(--border2); font-size: 13px; font-family: monospace;
-    color: var(--text); background: var(--surface); outline: none; transition: border-color 0.15s;
-  }
-  .input-group input:focus { border-color: var(--blue); }
-  .input-group .hint { font-size: 11px; color: var(--text4); margin-top: 6px; }
+/* ── Briefing ── */
+#briefingScreen { display: none; flex-direction: column; min-height: 100vh; }
+#briefingScreen.active { display: flex; }
 
-  .steps { text-align: left; margin-bottom: 24px; }
-  .steps ol { padding-left: 20px; }
-  .steps li { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
-  .steps code { background: var(--grey-bg); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; color: var(--red); }
+.briefing-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 20px 24px; position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.header-left h1 { font-size: 20px; font-weight: 700; }
+.header-left .date-line { font-size: 13px; color: var(--text3); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.unread-badge { background: var(--blue-bg); color: var(--blue); padding: 4px 12px;
+  border-radius: 20px; font-size: 13px; font-weight: 600; }
+.btn-icon { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 11px; cursor: pointer; font-size: 14px; color: var(--text2);
+  transition: all .15s; white-space: nowrap; }
+.btn-icon:hover { background: var(--border); }
+.sync-time { font-size: 11px; color: var(--text3); }
 
-  .btn-primary {
-    width: 100%; padding: 12px 24px; border-radius: 12px;
-    background: var(--blue); color: #fff; font-size: 14px; font-weight: 600;
-    border: none; cursor: pointer; transition: opacity 0.15s;
-  }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.briefing-body { flex: 1; padding: 24px; max-width: 720px; margin: 0 auto; width: 100%; }
 
-  .google-btn {
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    width: 100%; padding: 12px 24px; border-radius: 12px;
-    background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600;
-    border: 1.5px solid var(--border2); cursor: pointer; transition: all 0.15s; margin-bottom: 12px;
-  }
-  .google-btn:hover { border-color: var(--blue); }
-  .google-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .google-icon { width: 20px; height: 20px; flex-shrink: 0; }
-  .setup-link { font-size: 12px; color: var(--text4); margin-top: 16px; cursor: pointer; text-decoration: underline; }
-  .setup-link:hover { color: var(--blue); }
+.summary-banner {
+  background: var(--surface); border-radius: var(--radius); padding: 16px 20px;
+  margin-bottom: 24px; box-shadow: var(--shadow); font-size: 14px; color: var(--text2);
+  line-height: 1.6; border-left: 3px solid var(--blue);
+}
 
-  /* ── App ── */
-  #appScreen { flex-direction: column; padding: 20px; }
+/* ── Section ── */
+.section { margin-bottom: 28px; }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: .7px;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 12px; display: flex;
+  align-items: center; gap: 6px; }
 
-  .app-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
-  }
-  .app-header h1 { font-size: 22px; font-weight: 700; }
-  .header-right { display: flex; align-items: center; gap: 8px; }
-  .meta { font-size: 12px; color: var(--text4); margin-right: 4px; }
+/* ── Priority card ── */
+.priority-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  margin-bottom: 14px; overflow: hidden; transition: opacity .35s;
+}
+.priority-card.high { border-left: 4px solid var(--red); }
+.priority-card.medium { border-left: 4px solid var(--amber); }
 
-  .btn-icon {
-    width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border2);
-    background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 16px; transition: all 0.15s; color: var(--text3);
-  }
-  .btn-icon:hover { border-color: var(--blue); color: var(--blue); }
+.pc-top { padding: 18px 20px 14px; }
+.pc-from { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.pc-subject { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+.pc-summary { font-size: 14px; color: var(--text2); line-height: 1.6; }
 
-  .btn-small {
-    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-    border: 1.5px solid var(--border2); background: var(--surface); cursor: pointer;
-    color: var(--text3); transition: all 0.15s;
-  }
-  .btn-small.refresh { border-color: var(--blue); color: var(--blue); }
-  .btn-small.refresh:hover { background: var(--blue); color: #fff; }
-  .btn-small:hover { border-color: var(--red); color: var(--red); }
-  .btn-small.refresh:hover { border-color: var(--blue); color: #fff; }
+.pc-urgency { display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 6px; margin-bottom: 8px; }
+.pc-urgency.high { background: var(--red-bg); color: var(--red); }
+.pc-urgency.medium { background: var(--amber-bg); color: var(--amber); }
 
-  /* ── Stats ── */
-  .stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .stat-card {
-    background: var(--surface); border-radius: 12px; padding: 14px 20px;
-    flex: 1; min-width: 90px; text-align: center;
-    box-shadow: 0 1px 3px var(--shadow);
-  }
-  .stat-card .num { font-size: 28px; font-weight: 700; line-height: 1.1; }
-  .stat-card .label { font-size: 11px; color: var(--text4); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
-  .stat-card.urgent .num  { color: var(--red); }
-  .stat-card.action .num  { color: var(--blue); }
-  .stat-card.senders .num { color: var(--green); }
-  .stat-card.drafts .num  { color: var(--purple); }
+.draft-section { border-top: 1px solid var(--border); padding: 16px 20px; background: var(--surface2); }
+.draft-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 10px; }
+.draft-textarea {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; font-size: 13.5px; line-height: 1.65; color: var(--text);
+  background: var(--surface); resize: vertical; min-height: 110px;
+  font-family: inherit; outline: none; transition: border-color .15s;
+}
+.draft-textarea:focus { border-color: var(--blue); }
+.draft-footer { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+.btn-send { padding: 9px 20px; background: var(--blue); color: #fff; border: none;
+  border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-send:hover { opacity: .88; }
+.btn-send:disabled { opacity: .5; cursor: default; }
+.btn-dismiss { padding: 9px 16px; background: none; border: 1.5px solid var(--border);
+  border-radius: 9px; font-size: 14px; color: var(--text3); cursor: pointer; }
+.btn-dismiss:hover { border-color: var(--text3); color: var(--text); }
+.card-done { padding: 20px; text-align: center; font-size: 14px; color: var(--green);
+  font-weight: 500; }
 
-  /* ── Filters ── */
-  .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .filter-btn {
-    padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border2);
-    background: var(--surface); font-size: 13px; cursor: pointer; color: var(--text); transition: all 0.15s;
-  }
-  .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* ── Archive card ── */
+.archive-card { background: var(--surface); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden; }
+.archive-item { display: flex; align-items: center; gap: 12px; padding: 11px 18px;
+  border-bottom: 1px solid var(--border); transition: opacity .3s; }
+.archive-item:last-of-type { border-bottom: none; }
+.ai-from { font-size: 13px; font-weight: 600; color: var(--text2); white-space: nowrap;
+  min-width: 100px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.ai-subject { font-size: 13px; color: var(--text3); flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-archive-one { padding: 4px 12px; background: none; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 12px; color: var(--text3); cursor: pointer; white-space: nowrap; }
+.btn-archive-one:hover { background: var(--surface2); }
+.archive-footer { padding: 14px 18px; border-top: 1px solid var(--border);
+  background: var(--surface2); }
+.btn-archive-all { padding: 10px 20px; background: var(--text); color: var(--surface);
+  border: none; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+.btn-archive-all:hover { opacity: .85; }
+.btn-archive-all:disabled { opacity: .5; cursor: default; }
 
-  /* ── Sender group ── */
-  .sender-group {
-    background: var(--surface); border-radius: 14px; margin-bottom: 16px;
-    box-shadow: 0 1px 4px var(--shadow); overflow: hidden; transition: box-shadow 0.2s;
-  }
-  .sender-group:hover { box-shadow: 0 3px 10px var(--shadow-h); }
+/* ── FYI list ── */
+.fyi-list { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.fyi-item { padding: 12px 18px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: start;
+  transition: opacity .3s; }
+.fyi-item:last-child { border-bottom: none; }
+.fyi-from { font-size: 13px; font-weight: 600; color: var(--text2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fyi-body .subject { font-size: 13px; color: var(--text); margin-bottom: 2px; }
+.fyi-body .summary-text { font-size: 12px; color: var(--text3); line-height: 1.4; }
 
-  .sender-header {
-    display: flex; align-items: center; padding: 14px 18px;
-    cursor: pointer; gap: 12px; border-bottom: 1px solid var(--border); user-select: none;
-  }
-  .sender-avatar {
-    width: 38px; height: 38px; border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; font-size: 16px;
-    font-weight: 700; flex-shrink: 0; color: #fff;
-  }
-  .sender-info { flex: 1; min-width: 0; }
-  .sender-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sender-email { font-size: 11px; color: var(--text4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sender-badges { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+/* ── Empty / Error ── */
+.empty-state { text-align: center; padding: 60px 24px; color: var(--text3); }
+.empty-state .icon { font-size: 56px; margin-bottom: 16px; }
+.empty-state h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.empty-state p { font-size: 15px; }
+.error-card { background: var(--red-bg); border-radius: var(--radius); padding: 20px 24px;
+  color: var(--red); font-size: 14px; line-height: 1.6; }
+.error-card button { margin-top: 12px; padding: 8px 18px; background: var(--red);
+  color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap;
-  }
-  .badge.urgent { background: var(--red-bg);    color: var(--red); }
-  .badge.action { background: var(--blue-bg);   color: var(--blue); }
-  .badge.info   { background: var(--grey-bg);   color: var(--text3); }
-  .badge.count  { background: var(--grey-bg);   color: var(--text3); }
-  .badge.draft  { background: var(--purple-bg); color: var(--purple); }
-
-  .chevron { color: var(--text4); font-size: 12px; transition: transform 0.2s; flex-shrink: 0; }
-  .sender-group.open .chevron { transform: rotate(90deg); }
-
-  .email-list { display: none; }
-  .sender-group.open .email-list { display: block; }
-
-  .email-item { padding: 14px 18px; border-bottom: 1px solid var(--border); }
-  .email-item:last-child { border-bottom: none; }
-  .email-subject { font-weight: 600; font-size: 13px; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
-  .email-date { font-size: 11px; color: var(--text4); white-space: nowrap; margin-left: auto; flex-shrink: 0; padding-top: 2px; }
-  .email-snippet { font-size: 12px; color: var(--text3); margin-bottom: 10px; line-height: 1.45; }
-
-  /* Draft banner */
-  .draft-banner {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--purple-bg); border: 1.5px solid var(--purple-border); border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 10px;
-  }
-  .draft-banner .draft-icon { font-size: 18px; flex-shrink: 0; }
-  .draft-banner .draft-label { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 2px; }
-  .draft-banner .draft-to { font-size: 11px; color: var(--purple); }
-
-  /* Action items */
-  .action-items { display: flex; flex-direction: column; gap: 6px; }
-  .action-item {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4;
-  }
-  .action-item.urgent { background: var(--red-bg);    border-left: 3px solid var(--red);    color: var(--red); }
-  .action-item.do     { background: var(--green-bg);  border-left: 3px solid var(--green);  color: var(--green); }
-  .action-item.review { background: var(--orange-bg); border-left: 3px solid var(--orange); color: var(--orange); }
-  .action-item.info   { background: var(--grey-bg);   border-left: 3px solid var(--text4);  color: var(--text3); }
-  .action-icon { flex-shrink: 0; margin-top: 1px; }
-
-  /* ── Message body ── */
-  .message-body-wrap {
-    margin-top: 10px; border: 1px solid var(--border2); border-radius: 10px;
-    overflow: hidden; background: var(--surface2);
-  }
-  .message-body-text {
-    padding: 12px 14px; font-size: 12.5px; line-height: 1.65; color: var(--text2);
-    white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto;
-  }
-  .message-loading {
-    padding: 12px 14px; font-size: 12px; color: var(--text4); font-style: italic;
-  }
-
-  /* ── Email action buttons ── */
-  .email-actions-row {
-    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
-  }
-  .btn-action {
-    padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
-    cursor: pointer; border: 1px solid var(--border2); background: var(--surface2);
-    color: var(--text2); transition: all 0.15s; white-space: nowrap;
-  }
-  .btn-action.reply:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .btn-action.archive:hover { background: var(--green); color: #fff; border-color: var(--green); }
-  .btn-action.archiving { opacity: 0.5; cursor: default; }
-
-  /* ── Inline compose ── */
-  .compose-area {
-    margin-top: 12px; border: 1px solid var(--border2); border-radius: 10px;
-    overflow: hidden; background: var(--surface);
-  }
-  .compose-to {
-    padding: 8px 12px; font-size: 12px; color: var(--text3);
-    border-bottom: 1px solid var(--border); background: var(--surface2);
-  }
-  .compose-body {
-    width: 100%; padding: 12px; font-size: 13px; line-height: 1.6;
-    color: var(--text); background: var(--surface); border: none; outline: none;
-    resize: vertical; min-height: 130px; font-family: inherit; box-sizing: border-box;
-  }
-  .compose-footer {
-    display: flex; gap: 8px; padding: 10px 12px;
-    border-top: 1px solid var(--border); background: var(--surface2);
-  }
-  .btn-send {
-    padding: 7px 18px; border-radius: 8px; background: var(--blue); color: #fff;
-    border: none; cursor: pointer; font-size: 13px; font-weight: 500;
-  }
-  .btn-send:hover { opacity: 0.85; }
-  .btn-send:disabled { opacity: 0.5; cursor: default; }
-  .btn-cancel {
-    padding: 7px 14px; border-radius: 8px; background: none; color: var(--text3);
-    border: 1px solid var(--border2); cursor: pointer; font-size: 13px;
-  }
-  .compose-saved {
-    padding: 12px; color: var(--green); font-size: 13px; font-weight: 500;
-    background: var(--green-bg); text-align: center;
-  }
-
-  /* ── Settings panel ── */
-  .settings-overlay {
-    display: none; position: fixed; inset: 0; background: var(--overlay); z-index: 100;
-    transition: opacity 0.2s;
-  }
-  .settings-overlay.open { display: block; }
-
-  .settings-panel {
-    position: fixed; top: 0; right: -360px; width: 360px; max-width: 100vw; height: 100%;
-    background: var(--surface); box-shadow: -4px 0 24px var(--shadow);
-    display: flex; flex-direction: column; z-index: 101;
-    transition: right 0.25s cubic-bezier(0.4,0,0.2,1);
-    overflow: hidden;
-  }
-  .settings-panel.open { right: 0; }
-
-  .settings-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  }
-  .settings-header h2 { font-size: 17px; font-weight: 700; }
-  .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text4); padding: 2px 6px; border-radius: 6px; }
-  .close-btn:hover { background: var(--surface2); color: var(--text); }
-
-  .settings-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 24px; }
-
-  .setting-section h3 { font-size: 12px; font-weight: 700; color: var(--text4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-
-  /* Toggle */
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
-  .toggle-row span { font-size: 14px; color: var(--text); }
-  .toggle {
-    position: relative; width: 44px; height: 26px; cursor: pointer;
-  }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-track {
-    position: absolute; inset: 0; background: var(--border2); border-radius: 13px; transition: background 0.2s;
-  }
-  .toggle input:checked + .toggle-track { background: var(--blue); }
-  .toggle-thumb {
-    position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
-    background: #fff; border-radius: 50%; transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
-
-  /* Filtered senders */
-  .filter-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-  .filter-item {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--surface2); border-radius: 10px; padding: 9px 12px; gap: 8px;
-  }
-  .filter-item-email { font-size: 12px; font-family: monospace; color: var(--text2); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .remove-btn { background: none; border: none; color: var(--text4); cursor: pointer; font-size: 16px; flex-shrink: 0; padding: 0 2px; border-radius: 4px; line-height: 1; }
-  .remove-btn:hover { color: var(--red); }
-
-  .add-filter-row { display: flex; gap: 8px; }
-  .add-filter-row input {
-    flex: 1; padding: 8px 12px; border-radius: 10px;
-    border: 1.5px solid var(--border2); font-size: 12px; font-family: monospace;
-    background: var(--surface); color: var(--text); outline: none;
-  }
-  .add-filter-row input:focus { border-color: var(--blue); }
-  .add-filter-row button {
-    padding: 8px 14px; border-radius: 10px; background: var(--blue); color: #fff;
-    border: none; font-size: 13px; font-weight: 600; cursor: pointer;
-  }
-  .add-filter-row button:hover { opacity: 0.88; }
-
-  .setting-note { font-size: 12px; color: var(--text4); line-height: 1.5; margin-top: 6px; }
-
-  /* ── Loading / empty / error ── */
-  .loading-state {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; padding: 60px 20px; gap: 16px; color: var(--text4);
-  }
-  .spinner {
-    width: 36px; height: 36px; border: 3px solid var(--border2);
-    border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-label { font-size: 14px; }
-  .loading-sub { font-size: 12px; color: var(--text4); }
-  .empty-state { text-align: center; padding: 50px 20px; color: var(--text4); font-size: 14px; }
-  .empty-state .big { font-size: 36px; margin-bottom: 10px; }
-  .error-msg {
-    background: var(--red-bg); border: 1px solid var(--red); border-radius: 10px;
-    padding: 14px 18px; color: var(--red); font-size: 13px; margin-bottom: 16px; opacity: 0.8;
-  }
-  .no-results { text-align: center; color: var(--text4); padding: 40px 20px; font-size: 14px; }
-
-  @media (max-width: 600px) {
-    /* App layout */
-    #appScreen { padding: 12px; }
-    .auth-card { padding: 24px 16px; }
-
-    /* Header: stack on mobile */
-    .app-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .header-right { width: 100%; justify-content: space-between; }
-    .meta { flex: 1; }
-
-    /* Stats: 2x2 grid */
-    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat-card { min-width: 0; padding: 12px 10px; }
-    .stat-card .num { font-size: 26px; }
-    .stat-card .label { font-size: 10px; }
-
-    /* Filter bar: scrollable single row */
-    .filter-bar {
-      display: flex; flex-wrap: nowrap; overflow-x: auto;
-      gap: 8px; padding-bottom: 4px; margin-bottom: 16px;
-      -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    .filter-bar::-webkit-scrollbar { display: none; }
-    .filter-btn { flex-shrink: 0; white-space: nowrap; padding: 8px 14px; }
-
-    /* Sender group */
-    .sender-header { padding: 12px 14px; gap: 10px; }
-    .sender-avatar { width: 34px; height: 34px; font-size: 14px; }
-    .sender-name { font-size: 13px; }
-    .sender-badges .badge.action,
-    .sender-badges .badge.urgent,
-    .sender-badges .badge.info { display: none; }
-    .sender-badges { gap: 4px; }
-
-    /* Email items */
-    .email-item { padding: 12px 14px; }
-    .email-subject { font-size: 13px; flex-direction: column; gap: 3px; }
-    .email-date { margin-left: 0; }
-    .email-snippet { font-size: 12px; margin-bottom: 8px; }
-    .action-item { padding: 8px 10px; font-size: 12px; }
-
-    /* Settings panel: bottom sheet on mobile */
-    .settings-panel {
-      width: 100vw; top: auto; bottom: -100vh; right: 0; height: 80vh;
-      border-radius: 20px 20px 0 0;
-      transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
-    }
-    .settings-panel.open { bottom: 0; right: 0; }
-
-    /* Bigger touch targets */
-    .btn-icon { width: 40px; height: 40px; }
-    .btn-small { padding: 8px 16px; }
-    .google-btn { padding: 14px 20px; }
-    .btn-primary { padding: 14px; }
-  }
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .briefing-header { padding: 14px 16px; flex-wrap: wrap; }
+  .header-left h1 { font-size: 17px; }
+  .sync-time { display: none; }
+  .briefing-body { padding: 16px; }
+  .fyi-item { grid-template-columns: 90px 1fr auto; gap: 8px; }
+  .ai-from { min-width: 80px; max-width: 100px; }
+}
 </style>
 </head>
 <body>
 
-<!-- ── Setup ── -->
+<!-- Setup -->
 <div id="setupScreen" class="screen">
-  <div class="auth-card">
-    <div class="logo">📬</div>
-    <h1>Inbox Triage Setup</h1>
-    <p>Paste your Google OAuth Client ID below. You only need to do this once.</p>
-    <div class="steps"><ol>
-      <li>Go to <strong>console.cloud.google.com</strong> → APIs &amp; Services → Credentials</li>
-      <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web application)</li>
-      <li>Add this page's URL to <strong>Authorized JavaScript origins</strong></li>
-      <li>Enable the <strong>Gmail API</strong> in APIs &amp; Services → Library</li>
-    </ol></div>
-    <div class="input-group">
-      <label>OAuth Client ID</label>
-      <input type="text" id="clientIdInput" placeholder="123456789-abc...apps.googleusercontent.com" />
-      <div class="hint">Found in Google Cloud Console → Credentials → your OAuth 2.0 Client</div>
-    </div>
-    <button class="btn-primary" onclick="saveClientId()">Save &amp; Continue</button>
+  <div class="setup-card">
+    <h1>📬 Inbox Briefing</h1>
+    <p class="sub">Get a daily AI summary of your inbox — priority items, suggested actions, and draft replies ready to send.</p>
+    <div class="field-label">Google OAuth Client ID</div>
+    <input id="clientIdInput" class="field-input" type="text" placeholder="12345...apps.googleusercontent.com">
+    <div class="field-label">Gemini API Key</div>
+    <input id="geminiKeyInput" class="field-input" type="password" placeholder="AIza...">
+    <p class="setup-help">Get a free Gemini key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a></p>
+    <button class="btn-primary" onclick="saveSetup()">Get Started</button>
   </div>
 </div>
 
-<!-- ── Sign-in ── -->
+<!-- Sign in -->
 <div id="signInScreen" class="screen">
-  <div class="auth-card">
-    <div class="logo">📬</div>
-    <h1>Inbox Triage</h1>
-    <p>Connect your Gmail account to see your unread emails grouped by sender with action items pulled out.</p>
-    <button class="google-btn" id="signInBtn" onclick="requestToken()" disabled>
-      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+  <div class="signin-card">
+    <div class="app-icon">📬</div>
+    <h1>Inbox Briefing</h1>
+    <p>Connect your Gmail to generate your AI-powered daily briefing.</p>
+    <button class="google-btn" id="signInBtn" onclick="signIn()" disabled>
+      <svg class="g-logo" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
       Sign in with Google
     </button>
-    <div class="setup-link" onclick="showSetup()">Change Client ID</div>
   </div>
 </div>
 
-<!-- ── App ── -->
-<div id="appScreen" class="screen">
-
-  <!-- Settings overlay + panel -->
-  <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
-  <div class="settings-panel" id="settingsPanel">
-    <div class="settings-header">
-      <h2>⚙️ Settings</h2>
-      <button class="close-btn" onclick="closeSettings()">✕</button>
-    </div>
-    <div class="settings-body">
-
-      <div class="setting-section">
-        <h3>Appearance</h3>
-        <div class="toggle-row">
-          <span>Dark mode</span>
-          <label class="toggle">
-            <input type="checkbox" id="darkToggle" onchange="toggleDark(this.checked)">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-      </div>
-
-      <div class="setting-section">
-        <h3>Filtered Senders</h3>
-        <p class="setting-note" style="margin-bottom:12px">Emails from these addresses will be hidden from the triage view.</p>
-        <div class="filter-list" id="filterList"></div>
-        <div class="add-filter-row">
-          <input type="text" id="newFilterInput" placeholder="sender@example.com" onkeydown="if(event.key==='Enter')addFilter()" />
-          <button onclick="addFilter()">Add</button>
-        </div>
-        <p class="setting-note">Changes take effect on next Refresh.</p>
-      </div>
-
-      <div class="setting-section">
-        <h3>Account</h3>
-        <button class="btn-small" onclick="switchAccount()" style="width:100%;text-align:center;padding:10px;margin-bottom:8px">Switch Account</button>
-        <button class="btn-small" onclick="signOut()" style="width:100%;text-align:center;padding:10px;background:var(--red-bg);color:var(--red);border-color:var(--red)">Sign out</button>
-        <div class="setup-link" onclick="showSetup()" style="margin-top:10px;display:block">Change Client ID</div>
-      </div>
-
+<!-- Loading -->
+<div id="loadingScreen" class="screen">
+  <div class="loading-card">
+    <div class="pulse">📬</div>
+    <div class="loading-step" id="loadingStep">Connecting…</div>
+    <div class="loading-sub">
+      <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
     </div>
   </div>
+</div>
 
-  <div class="app-header">
-    <h1>📬 Inbox Triage</h1>
+<!-- Briefing -->
+<div id="briefingScreen" class="screen">
+  <div class="briefing-header">
+    <div class="header-left">
+      <h1 id="greeting">Good morning</h1>
+      <div class="date-line">
+        <span id="dateStr"></span>
+        &nbsp;·&nbsp;
+        <span class="sync-time" id="lastSync"></span>
+      </div>
+    </div>
     <div class="header-right">
-      <span class="meta" id="lastUpdated"></span>
-      <button class="btn-small refresh" onclick="loadInbox()">↻ Refresh</button>
-      <button class="btn-icon" onclick="openSettings()" title="Settings">⚙️</button>
+      <span class="unread-badge" id="unreadBadge">— unread</span>
+      <button class="btn-icon" onclick="runBriefing()">↻ Refresh</button>
+      <button class="btn-icon" onclick="signOut()">Sign out</button>
+      <button class="btn-icon" id="darkBtn" onclick="toggleDark()">🌙</button>
     </div>
   </div>
-
-  <div class="stats-row">
-    <div class="stat-card urgent"> <div class="num" id="statUrgent">—</div><div class="label">Urgent</div></div>
-    <div class="stat-card action"> <div class="num" id="statAction">—</div><div class="label">Action Items</div></div>
-    <div class="stat-card senders"><div class="num" id="statSenders">—</div><div class="label">Senders</div></div>
-    <div class="stat-card drafts"> <div class="num" id="statDrafts">—</div><div class="label">Drafts Ready</div></div>
-  </div>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="urgent">🔴 Urgent</button>
-    <button class="filter-btn" data-filter="action">🔵 Needs Action</button>
-    <button class="filter-btn" data-filter="info">⚪ Info Only</button>
-    <button class="filter-btn" data-filter="draft">✉️ Draft Ready</button>
-  </div>
-
-  <div id="content">
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <div class="loading-label">Fetching your inbox…</div>
-      <div class="loading-sub">Extracting action items</div>
-    </div>
-  </div>
+  <div class="briefing-body" id="briefingBody"></div>
 </div>
 
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SCOPES  = 'https://www.googleapis.com/auth/gmail.modify';
-const SCOPE_VER = 'v2'; // bump when scopes change to force re-auth
-const COLORS  = ['#1a73e8','#d93025','#188038','#7c3aed','#e65c00','#00897b','#c62828','#1565c0'];
-const P_RANK  = { info: 0, action: 1, urgent: 2 };
+const SCOPES    = 'https://www.googleapis.com/auth/gmail.modify';
+const SCOPE_VER = 'v4';
+const LS_CLIENT = 'ib2_client_id';
+const LS_GEMINI = 'ib2_gemini_key';
+const LS_TOKEN  = 'ib2_access_token';
+const LS_EXPIRY = 'ib2_token_expiry';
+const LS_SCOPEV = 'ib2_scope_ver';
+const LS_DARK   = 'ib2_dark';
 
-const LS_CLIENT   = 'inbox_triage_client_id';
-const LS_TOKEN    = 'inbox_triage_access_token';
-const LS_EXPIRY   = 'inbox_triage_token_expiry';
-const LS_DARK     = 'inbox_triage_dark';
-const LS_FILTERED = 'inbox_triage_filtered_senders';
-const LS_SCOPE_V  = 'inbox_triage_scope_ver';
+let accessToken  = null;
+let geminiKey    = null;
+let tokenClient  = null;
+let briefingData = null;   // { emailData[], result{} }
+let archiveQueue = [];     // threadIds queued for batch archive
 
-// Default filtered senders
-const DEFAULT_FILTERED = [
-  'no-reply@accounts.google.com',
-  'no-reply@google.com'
-];
-
-let tokenClient, accessToken = null, activeFilter = 'all', allSenders = [];
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  // Apply saved theme immediately
-  applyDark(localStorage.getItem(LS_DARK) === '1');
-
-  // Seed default filters if first run
-  if (!localStorage.getItem(LS_FILTERED)) {
-    localStorage.setItem(LS_FILTERED, JSON.stringify(DEFAULT_FILTERED));
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  if (localStorage.getItem(LS_DARK) === '1') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('darkBtn').textContent = '☀️';
   }
-
-  const clientId = localStorage.getItem(LS_CLIENT);
-  if (!clientId) { show('setupScreen'); return; }
-
-  // Force re-auth if scope version changed (e.g. upgraded from readonly to modify)
-  if (localStorage.getItem(LS_SCOPE_V) !== SCOPE_VER) {
+  if (localStorage.getItem(LS_SCOPEV) !== SCOPE_VER) {
     localStorage.removeItem(LS_TOKEN);
     localStorage.removeItem(LS_EXPIRY);
-    localStorage.setItem(LS_SCOPE_V, SCOPE_VER);
+    localStorage.setItem(LS_SCOPEV, SCOPE_VER);
   }
+  const clientId = localStorage.getItem(LS_CLIENT);
+  geminiKey      = localStorage.getItem(LS_GEMINI);
+  if (!clientId || !geminiKey) { show('setupScreen'); return; }
 
   const cached = localStorage.getItem(LS_TOKEN);
-  const expiry = parseInt(localStorage.getItem(LS_EXPIRY) || '0', 10);
-
+  const expiry = parseInt(localStorage.getItem(LS_EXPIRY) || '0');
   if (cached && Date.now() < expiry) {
     accessToken = cached;
-    show('appScreen');
-    loadInbox();
-    waitForGIS(clientId, false);
-  } else {
-    show('signInScreen');
-    setSignInLabel('Reconnecting…', true);
     waitForGIS(clientId, true);
+    runBriefing();
+  } else {
+    waitForGIS(clientId, false);
+    show('signInScreen');
   }
-});
+};
 
+function show(id) {
+  ['setupScreen','signInScreen','loadingScreen','briefingScreen'].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.toggle('active', s === id);
+  });
+}
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
+function saveSetup() {
+  const clientId = document.getElementById('clientIdInput').value.trim();
+  const gKey     = document.getElementById('geminiKeyInput').value.trim();
+  if (!clientId || !gKey) { alert('Both fields are required.'); return; }
+  localStorage.setItem(LS_CLIENT, clientId);
+  localStorage.setItem(LS_GEMINI, gKey);
+  localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_EXPIRY);
+  window.location.reload();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 function waitForGIS(clientId, auto) {
   if (typeof google !== 'undefined' && google.accounts) initGIS(clientId, auto);
   else setTimeout(() => waitForGIS(clientId, auto), 100);
@@ -629,46 +355,22 @@ function initGIS(clientId, auto) {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId, scope: SCOPES,
     callback: handleToken,
-    error_callback: () => setSignInLabel('Sign in with Google', false)
+    error_callback: () => { show('signInScreen'); document.getElementById('signInBtn').disabled = false; }
   });
   if (auto) tokenClient.requestAccessToken({ prompt: '' });
-  else document.getElementById('signInBtn').disabled = false;
+  else      document.getElementById('signInBtn').disabled = false;
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-function saveClientId() {
-  const val = document.getElementById('clientIdInput').value.trim();
-  if (!val || !val.includes('.apps.googleusercontent.com')) {
-    alert('Please paste a valid OAuth Client ID ending in .apps.googleusercontent.com');
-    return;
-  }
-  localStorage.setItem(LS_CLIENT, val);
-  show('signInScreen');
-  setSignInLabel('Reconnecting…', true);
-  waitForGIS(val, true);
-}
-
-function requestToken() {
-  if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' });
-}
-
-function switchAccount() {
-  if (accessToken) google.accounts.oauth2.revoke(accessToken);
-  accessToken = null;
-  localStorage.removeItem(LS_TOKEN);
-  localStorage.removeItem(LS_EXPIRY);
-  if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' });
-}
+function signIn() { if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' }); }
 
 function handleToken(resp) {
-  if (resp.error) { setSignInLabel('Sign in with Google', false); return; }
+  if (resp.error) { show('signInScreen'); return; }
   accessToken = resp.access_token;
   const expMs = Date.now() + ((resp.expires_in || 3600) - 120) * 1000;
   localStorage.setItem(LS_TOKEN, resp.access_token);
   localStorage.setItem(LS_EXPIRY, String(expMs));
-  localStorage.setItem(LS_SCOPE_V, SCOPE_VER);
-  show('appScreen');
-  loadInbox();
+  localStorage.setItem(LS_SCOPEV, SCOPE_VER);
+  runBriefing();
 }
 
 function signOut() {
@@ -676,521 +378,357 @@ function signOut() {
   accessToken = null;
   localStorage.removeItem(LS_TOKEN);
   localStorage.removeItem(LS_EXPIRY);
-  allSenders = [];
-  closeSettings();
-  setSignInLabel('Sign in with Google', false);
   show('signInScreen');
 }
 
-function showSetup() {
-  closeSettings();
-  show('setupScreen');
-  document.getElementById('clientIdInput').value = localStorage.getItem(LS_CLIENT) || '';
-}
-
-function setSignInLabel(label, disabled) {
-  const btn = document.getElementById('signInBtn');
-  btn.disabled = disabled;
-  btn.childNodes[btn.childNodes.length - 1].textContent = ' ' + label;
-}
-
-// ── Settings panel ────────────────────────────────────────────────────────────
-function openSettings() {
-  document.getElementById('settingsOverlay').classList.add('open');
-  document.getElementById('settingsPanel').classList.add('open');
-  document.getElementById('darkToggle').checked = localStorage.getItem(LS_DARK) === '1';
-  renderFilterList();
-}
-function closeSettings() {
-  document.getElementById('settingsOverlay').classList.remove('open');
-  document.getElementById('settingsPanel').classList.remove('open');
-}
-
-function toggleDark(on) {
-  localStorage.setItem(LS_DARK, on ? '1' : '0');
-  applyDark(on);
-}
-function applyDark(on) {
-  document.documentElement.setAttribute('data-theme', on ? 'dark' : '');
-}
-
-function getFilteredSenders() {
-  try { return JSON.parse(localStorage.getItem(LS_FILTERED) || '[]'); }
-  catch { return []; }
-}
-function saveFilteredSenders(list) {
-  localStorage.setItem(LS_FILTERED, JSON.stringify(list));
-}
-
-function renderFilterList() {
-  const list = getFilteredSenders();
-  const el = document.getElementById('filterList');
-  el.innerHTML = list.length === 0
-    ? '<div style="font-size:12px;color:var(--text4)">No filters yet.</div>'
-    : list.map((s, i) => `
-        <div class="filter-item">
-          <span class="filter-item-email">${esc(s)}</span>
-          <button class="remove-btn" onclick="removeFilter(${i})" title="Remove">✕</button>
-        </div>`).join('');
-}
-
-function addFilter() {
-  const input = document.getElementById('newFilterInput');
-  const val = input.value.trim().toLowerCase();
-  if (!val) return;
-  const list = getFilteredSenders();
-  if (!list.includes(val)) { list.push(val); saveFilteredSenders(list); }
-  input.value = '';
-  renderFilterList();
-}
-
-function removeFilter(i) {
-  const list = getFilteredSenders();
-  list.splice(i, 1);
-  saveFilteredSenders(list);
-  renderFilterList();
+function toggleDark() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? '' : 'dark');
+  document.getElementById('darkBtn').textContent = dark ? '🌙' : '☀️';
+  localStorage.setItem(LS_DARK, dark ? '0' : '1');
 }
 
 // ── Gmail API ─────────────────────────────────────────────────────────────────
 async function gmailGet(path, params = {}) {
   const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`);
   Object.entries(params).forEach(([k, v]) => {
-    if (Array.isArray(v)) v.forEach(item => url.searchParams.append(k, item));
+    if (Array.isArray(v)) v.forEach(i => url.searchParams.append(k, i));
     else url.searchParams.set(k, String(v));
   });
   const resp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (resp.status === 401) {
-    tokenClient.requestAccessToken({ prompt: '' });
-    throw new Error('Session expired — reconnecting. Please wait a moment and refresh.');
-  }
-  if (!resp.ok) throw new Error(`Gmail API error ${resp.status}`);
+  if (resp.status === 401) { tokenClient.requestAccessToken({ prompt: '' }); throw new Error('Session expired — reconnecting.'); }
+  if (!resp.ok) throw new Error(`Gmail error ${resp.status}`);
   return resp.json();
 }
 
 async function gmailPost(path, body) {
   const resp = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (resp.status === 401) { tokenClient.requestAccessToken({ prompt: '' }); throw new Error('Session expired — reconnecting.'); }
-  if (!resp.ok) throw new Error(`Gmail API error ${resp.status}`);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`Gmail error ${resp.status}: ${err.error?.message || ''}`);
+  }
   return resp.json();
 }
 
-// ── Thread data map (for compose) ─────────────────────────────────────────────
-const threadDataMap = {};
+// ── Gemini API ────────────────────────────────────────────────────────────────
+async function callGemini(emailData) {
+  const prompt = `You are an email assistant. Analyze these unread Gmail messages and return a structured JSON briefing.
 
-function generateReplyDraft(data) {
-  const firstName = (data.senderName || 'there').split(/[\s,]+/)[0];
-  const actions   = data.actions || [];
-  let body = `Hi ${firstName},\n\n`;
-  if (actions.length > 0) {
-    body += `Thanks for your message. `;
-    const hint = actions[0].text.replace(/^(action|do|review|respond|urgent)[:\-\s]*/i, '').toLowerCase();
-    body += `I wanted to follow up regarding ${hint}.\n\n[Your response here]\n\n`;
-  } else if (data.snippet) {
-    body += `Thanks for your email.\n\n[Your response here]\n\n`;
-  } else {
-    body += `[Your response here]\n\n`;
-  }
-  body += `Best,\n[Your name]`;
-  return body;
-}
+Emails:
+${JSON.stringify(emailData.map(e => ({
+  threadId: e.threadId,
+  from: e.from,
+  fromEmail: e.fromEmail,
+  subject: e.subject,
+  snippet: e.snippet
+})), null, 2)}
 
-function extractBody(payload) {
-  if (!payload) return '';
-  const decode = (b64) => {
-    try { return decodeURIComponent(escape(atob(b64.replace(/-/g,'+').replace(/_/g,'/'))));
-    } catch { return ''; }
-  };
-  if (payload.mimeType === 'text/plain' && payload.body?.data) return decode(payload.body.data);
-  if (payload.parts) {
-    const plain = payload.parts.find(p => p.mimeType === 'text/plain');
-    if (plain?.body?.data) return decode(plain.body.data);
-    const html = payload.parts.find(p => p.mimeType === 'text/html');
-    if (html?.body?.data) {
-      const d = document.createElement('div');
-      d.innerHTML = decode(html.body.data);
-      return d.innerText || d.textContent || '';
+Return ONLY valid JSON with this exact structure:
+{
+  "summary": "One concise sentence summarizing the inbox state and what needs attention.",
+  "priority": [
+    {
+      "threadId": "...",
+      "from": "...",
+      "subject": "...",
+      "urgency": "high",
+      "summary": "2-3 sentences: what this is about and what action is needed.",
+      "draft": "Complete ready-to-send reply. Professional but warm. 2-4 sentences. Do NOT include a subject line or greeting salutation — start with the body."
     }
-    for (const part of payload.parts) { const r = extractBody(part); if (r) return r; }
+  ],
+  "archive": ["threadId1", "threadId2"],
+  "fyi": [
+    {
+      "threadId": "...",
+      "from": "...",
+      "subject": "...",
+      "summary": "One sentence: what this is."
+    }
+  ]
+}
+
+Classification rules:
+- priority: emails that need a personal reply from the user (questions, requests, action items, meetings). Urgency "high" = time-sensitive or important sender. "medium" = needs reply but not urgent.
+- archive: newsletters, marketing, receipts, automated notifications, no-reply senders, GitHub/Slack/app digests, social updates, promotional emails.
+- fyi: informational emails worth keeping (internal updates, confirmations, non-urgent FYIs) but requiring no reply.
+- If unsure between archive and fyi, prefer archive.
+- draft replies must be complete, helpful, and natural — not placeholders.`;
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.25 }
+      })
+    }
+  );
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`Gemini error ${resp.status}: ${err.error?.message || 'Unknown error'}`);
   }
-  if (payload.body?.data) return decode(payload.body.data);
-  return '';
+  const data = await resp.json();
+  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error('Gemini returned no content');
+  return JSON.parse(raw);
 }
 
-async function toggleMessageBody(messageId, threadId) {
-  const wrap = document.getElementById('msgbody-' + threadId);
-  const btn  = document.getElementById('readbtn-' + threadId);
-  if (!wrap) return;
-  const isOpen = wrap.style.display !== 'none';
-  if (isOpen) {
-    wrap.style.display = 'none';
-    btn.textContent = '👁 Read';
-    return;
-  }
-  wrap.style.display = 'block';
-  if (wrap.dataset.loaded) { btn.textContent = 'Hide'; return; }
-  btn.textContent = 'Loading…';
-  btn.disabled = true;
-  wrap.innerHTML = '<div class="message-loading">Loading message…</div>';
-  try {
-    const msg = await gmailGet(`messages/${messageId}`, { format: 'full' });
-    const text = extractBody(msg.payload).trim();
-    wrap.innerHTML = `<div class="message-body-text">${esc(text || '(no content)')}</div>`;
-    wrap.dataset.loaded = 'true';
-    btn.textContent = 'Hide';
-  } catch(e) {
-    wrap.innerHTML = `<div class="message-loading">⚠️ ${esc(String(e))}</div>`;
-    btn.textContent = '👁 Read';
-  }
-  btn.disabled = false;
-}
-
-async function archiveThread(threadId) {
-  const itemEl = document.getElementById('email-' + threadId);
-  const archiveBtn = itemEl && itemEl.querySelector('.btn-action.archive');
-  if (!itemEl || !archiveBtn) return;
-  archiveBtn.textContent = '⏳ Archiving…';
-  archiveBtn.classList.add('archiving');
-  try {
-    await gmailPost(`threads/${threadId}/modify`, { removeLabelIds: ['INBOX'] });
-    itemEl.style.transition = 'opacity 0.35s, max-height 0.35s';
-    itemEl.style.overflow   = 'hidden';
-    itemEl.style.opacity    = '0';
-    itemEl.style.maxHeight  = itemEl.offsetHeight + 'px';
-    setTimeout(() => { itemEl.style.maxHeight = '0'; itemEl.style.padding = '0'; }, 10);
-    setTimeout(() => {
-      itemEl.remove();
-      // Remove sender group if now empty
-      const emailList = document.querySelector(`.email-list`);
-      allSenders.forEach((s, si) => {
-        const ti = s.threads.findIndex(t => t.threadId === threadId);
-        if (ti !== -1) { s.threads.splice(ti, 1); if (s.threads.length === 0) allSenders.splice(si, 1); }
-      });
-      updateStats();
-    }, 360);
-  } catch(e) {
-    archiveBtn.textContent = '📦 Archive';
-    archiveBtn.classList.remove('archiving');
-    alert('Archive failed: ' + e.message);
-  }
-}
-
-function showReply(threadId) {
-  const compose = document.getElementById('compose-' + threadId);
-  if (!compose) return;
-  const isOpen = compose.style.display !== 'none';
-  compose.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) compose.querySelector('.compose-body').focus();
-}
-
-function cancelReply(threadId) {
-  const compose = document.getElementById('compose-' + threadId);
-  if (compose) compose.style.display = 'none';
-}
-
-async function sendDraft(threadId) {
-  const compose = document.getElementById('compose-' + threadId);
-  if (!compose) return;
-  const textarea = compose.querySelector('.compose-body');
-  const btn      = compose.querySelector('.btn-send');
-  const data     = threadDataMap[threadId];
-  if (!data || !textarea) return;
-
-  const body    = textarea.value.trim();
-  const subject = data.subject.startsWith('Re:') ? data.subject : 'Re: ' + data.subject;
-  const rawMsg  = [`To: ${data.senderEmail}`, `Subject: ${subject}`,
-    `Content-Type: text/plain; charset="UTF-8"`, `In-Reply-To: <${threadId}>`,
-    `References: <${threadId}>`, '', body].join('\r\n');
-  const encoded = btoa(unescape(encodeURIComponent(rawMsg)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-  btn.textContent = 'Saving…';
-  btn.disabled    = true;
-  try {
-    await gmailPost('drafts', { message: { threadId, raw: encoded } });
-    compose.innerHTML = '<div class="compose-saved">✅ Draft saved to Gmail — open Gmail to review &amp; send.</div>';
-    setTimeout(() => { compose.style.display = 'none'; }, 3000);
-    // Mark thread as having a draft
-    allSenders.forEach(s => s.threads.forEach(t => { if (t.threadId === threadId) t.hasDraft = true; }));
-    updateStats();
-  } catch(e) {
-    btn.textContent = 'Save Draft';
-    btn.disabled    = false;
-    alert('Failed to save draft: ' + e.message);
-  }
-}
-
-// ── Load inbox ────────────────────────────────────────────────────────────────
-async function loadInbox() {
-  document.getElementById('content').innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <div class="loading-label">Fetching your inbox…</div>
-      <div class="loading-sub">Matching drafts &amp; extracting action items</div>
-    </div>`;
+// ── Main flow ─────────────────────────────────────────────────────────────────
+async function runBriefing() {
+  show('loadingScreen');
+  setStep('Connecting to Gmail…');
 
   try {
-    const [threadsData, draftsData] = await Promise.all([
-      gmailGet('threads', { q: 'is:unread', maxResults: 20 }),
-      gmailGet('drafts',  { maxResults: 50 })
+    const [threadsResp] = await Promise.all([
+      gmailGet('threads', { q: 'is:unread in:inbox', maxResults: 30 })
     ]);
+    const stubs = threadsResp.threads || [];
 
-    const threadStubs = threadsData.threads || [];
-    const draftThreadIds = new Set(
-      (draftsData.drafts || [])
-        .filter(d => d.message?.threadId)
-        .map(d => d.message.threadId)
-    );
+    if (stubs.length === 0) { renderEmpty(); return; }
 
-    if (threadStubs.length === 0) {
-      document.getElementById('content').innerHTML = `
-        <div class="empty-state"><div class="big">🎉</div><div>Inbox zero — no unread emails!</div></div>`;
-      ['statUrgent','statAction','statSenders','statDrafts'].forEach(id =>
-        document.getElementById(id).textContent = '0'
-      );
-      document.getElementById('lastUpdated').textContent =
-        'Synced ' + new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-      return;
-    }
-
-    const threadDetails = await Promise.all(
-      threadStubs.map(t => gmailGet(`threads/${t.id}`, {
+    setStep('Reading your inbox…');
+    const details = await Promise.all(
+      stubs.map(t => gmailGet(`threads/${t.id}`, {
         format: 'metadata',
         metadataHeaders: ['Subject', 'From']
       }))
     );
 
-    const filtered = getFilteredSenders();
-
-    const flat = threadDetails.map(thread => {
-      const msg = thread.messages[thread.messages.length - 1];
-      const headers = {};
-      (msg.payload?.headers || []).forEach(h => { headers[h.name] = h.value; });
-      const parsed = parseSender(headers['From'] || '');
+    const emailData = details.map(thread => {
+      const msg     = thread.messages[thread.messages.length - 1];
+      const hmap    = {};
+      (msg.payload?.headers || []).forEach(h => { hmap[h.name] = h.value; });
+      const raw     = hmap['From'] || '';
+      const nameM   = raw.match(/^"?([^"<]+?)"?\s*</);
+      const emailM  = raw.match(/<([^>]+)>/) || [null, raw.replace(/.*<|>.*/g,'') || raw];
       return {
-        threadId:    thread.id,
-        messageId:   msg.id,
-        senderName:  parsed.name,
-        senderEmail: parsed.email,
-        subject:     headers['Subject'] || '(no subject)',
-        dateMs:      parseInt(msg.internalDate || '0', 10),
-        snippet:     thread.snippet || '',
-        hasDraft:    draftThreadIds.has(thread.id)
+        threadId:  thread.id,
+        messageId: msg.id,
+        from:      nameM ? nameM[1].trim() : (emailM[1] || raw),
+        fromEmail: emailM[1] || raw,
+        subject:   hmap['Subject'] || '(no subject)',
+        snippet:   thread.snippet || ''
       };
-    // Filter out ignored senders
-    }).filter(f => !filtered.includes(f.senderEmail.toLowerCase()));
-
-    const categorized = flat.map(f => ({ ...f, ...categorize(f) }));
-
-    const senderMap = {};
-    categorized.forEach(f => {
-      if (!senderMap[f.senderEmail]) {
-        senderMap[f.senderEmail] = { name: f.senderName, email: f.senderEmail, priority: 'info', threads: [] };
-      }
-      senderMap[f.senderEmail].threads.push(f);
-      if (P_RANK[f.priority] > P_RANK[senderMap[f.senderEmail].priority])
-        senderMap[f.senderEmail].priority = f.priority;
     });
 
-    allSenders = Object.values(senderMap).sort((a, b) => {
-      const pd = P_RANK[b.priority] - P_RANK[a.priority];
-      return pd !== 0 ? pd : b.threads.length - a.threads.length;
-    });
+    setStep('Analyzing with AI…');
+    const result = await callGemini(emailData);
 
-    updateStats();
-    renderGroups();
-    document.getElementById('lastUpdated').textContent =
-      'Synced ' + new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    briefingData  = { emailData, result };
+    archiveQueue  = result.archive || [];
 
-  } catch(err) {
-    document.getElementById('content').innerHTML =
-      `<div class="error-msg">⚠️ ${esc(String(err))}</div>
-       <div class="no-results">Try refreshing, or sign out and back in.</div>`;
+    setStep('Building your briefing…');
+    renderBriefing(result, emailData);
+
+  } catch (err) {
+    show('briefingScreen');
+    updateHeader(0);
+    document.getElementById('briefingBody').innerHTML =
+      `<div class="error-card">⚠️ ${esc(String(err))}<br><br><button onclick="runBriefing()">Try again</button></div>`;
     console.error(err);
   }
 }
 
-// ── Categorize ────────────────────────────────────────────────────────────────
-function categorize({ senderEmail, subject, snippet }) {
-  const se = senderEmail.toLowerCase();
-  const su = subject.toLowerCase();
-  const sn = snippet.toLowerCase();
-  const all = su + ' ' + sn;
+function setStep(msg) { document.getElementById('loadingStep').textContent = msg; }
 
-  if (/security alert|sign.?in|new sign.?in|unauthorized|suspicious|compromised|verify your|account locked|2-step|two.factor/.test(all) ||
-      /(alert|security|accounts)\.(google|apple|microsoft|amazon)\.com/.test(se)) {
-    return { priority: 'urgent', actions: [
-      { type: 'urgent', icon: '🚨', text: 'Review this security alert and confirm the activity was authorized.' },
-      { type: 'review', icon: '🔍', text: 'If unrecognized, secure your account immediately at myaccount.google.com.' }
-    ]};
-  }
-
-  const isNoReply = /no.?reply|noreply|do.not.reply|notification|notify|mailer|newsletter|updates@/.test(se);
-
-  if (/welcome|getting started|you're in|trial start|subscription confirmed|order confirm/.test(all))
-    return { priority: 'info', actions: [{ type: 'info', icon: 'ℹ️', text: 'Informational — no action required.' }]};
-
-  if (/unsubscribe|weekly digest|monthly update/.test(sn) || isNoReply)
-    return { priority: 'info', actions: [{ type: 'info', icon: 'ℹ️', text: 'Automated notification — review if relevant.' }]};
-
-  if (/can you|could you|please|follow up|fwd:|re:|[?]/.test(su))
-    return { priority: 'action', actions: [{ type: 'do', icon: '✅', text: 'Reply to this email — a response is expected.' }]};
-
-  if (/^fwd?:/i.test(subject))
-    return { priority: 'action', actions: [{ type: 'do', icon: '✅', text: 'Review this forwarded message and take any needed action.' }]};
-
-  if (!isNoReply)
-    return { priority: 'action', actions: [{ type: 'review', icon: '🔍', text: 'Read and decide if a reply is needed.' }]};
-
-  return { priority: 'info', actions: [{ type: 'info', icon: 'ℹ️', text: 'Automated email — no action required.' }]};
+// ── Header ────────────────────────────────────────────────────────────────────
+function updateHeader(count) {
+  const h = new Date().getHours();
+  document.getElementById('greeting').textContent =
+    h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dateStr').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('unreadBadge').textContent = count === 0 ? 'All clear' : `${count} unread`;
+  document.getElementById('lastSync').textContent =
+    'Synced ' + new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
-function renderGroups() {
-  const content = document.getElementById('content');
-  content.innerHTML = '';
+function renderEmpty() {
+  show('briefingScreen');
+  updateHeader(0);
+  document.getElementById('briefingBody').innerHTML = `
+    <div class="empty-state">
+      <div class="icon">🎉</div>
+      <h2>All clear!</h2>
+      <p>No unread emails in your inbox.</p>
+    </div>`;
+}
 
-  let list = allSenders;
-  if (activeFilter === 'urgent') list = allSenders.filter(s => s.priority === 'urgent');
-  else if (activeFilter === 'action') list = allSenders.filter(s => s.priority === 'action');
-  else if (activeFilter === 'info')   list = allSenders.filter(s => s.priority === 'info');
-  else if (activeFilter === 'draft')  list = allSenders.filter(s => s.threads.some(t => t.hasDraft));
+function renderBriefing(result, emailData) {
+  show('briefingScreen');
+  updateHeader(emailData.length);
 
-  if (list.length === 0) {
-    const el = document.createElement('div');
-    el.className = 'no-results';
-    el.textContent = activeFilter === 'draft' ? 'No draft replies pending.' : 'No emails match this filter.';
-    content.appendChild(el);
-    return;
+  const emailMap = {};
+  emailData.forEach(e => { emailMap[e.threadId] = e; });
+
+  const body = document.getElementById('briefingBody');
+  const parts = [];
+
+  // Summary banner
+  if (result.summary) {
+    parts.push(`<div class="summary-banner">${esc(result.summary)}</div>`);
   }
 
-  list.forEach((sender, i) => {
-    const hasDraft = sender.threads.some(t => t.hasDraft);
-    const group = document.createElement('div');
-    group.className = 'sender-group' + (i === 0 ? ' open' : '');
+  // Priority
+  if (result.priority?.length) {
+    parts.push(`
+      <div class="section">
+        <div class="section-title">⚡ Needs your attention (${result.priority.length})</div>
+        ${result.priority.map(item => renderPriorityCard(item)).join('')}
+      </div>`);
+  }
 
-    const draftBodies = {};
-    const emailsHtml = sender.threads.map(t => {
-      threadDataMap[t.threadId] = {
-        senderName: sender.name, senderEmail: sender.email, messageId: t.messageId,
-        subject: t.subject, snippet: t.snippet, actions: t.actions || []
-      };
-      draftBodies[t.threadId] = generateReplyDraft(threadDataMap[t.threadId]);
-      const reSubject = t.subject.startsWith('Re:') ? esc(t.subject) : 'Re: ' + esc(t.subject);
-      return `
-      <div class="email-item" id="email-${t.threadId}">
-        <div class="email-subject">
-          <span>${esc(t.subject)}</span>
-          <span class="email-date">${fmtDate(t.dateMs)}</span>
-        </div>
-        <div class="email-snippet">${esc(t.snippet)}</div>
-        <div id="msgbody-${t.threadId}" class="message-body-wrap" style="display:none"></div>
-        ${t.hasDraft ? `<div class="draft-banner">
-          <div class="draft-icon">✉️</div>
-          <div>
-            <div class="draft-label">Draft ready for your review</div>
-            <div class="draft-to">Open Gmail to review and send</div>
-          </div></div>` : ''}
-        <div class="action-items">
-          ${(t.actions || []).map(a => `
-            <div class="action-item ${a.type}">
-              <span class="action-icon">${a.icon}</span>
-              <span>${esc(a.text)}</span>
+  // Archive
+  if (result.archive?.length) {
+    const items = result.archive.map(id => emailMap[id]).filter(Boolean);
+    if (items.length) {
+      parts.push(`
+        <div class="section" id="archive-section">
+          <div class="section-title">📦 Suggested archive (${items.length})</div>
+          <div class="archive-card">
+            ${items.map(e => `
+              <div class="archive-item" id="ai-${e.threadId}">
+                <span class="ai-from">${esc(e.from)}</span>
+                <span class="ai-subject">${esc(e.subject)}</span>
+                <button class="btn-archive-one" onclick="archiveOne('${e.threadId}')">Archive</button>
+              </div>`).join('')}
+            <div class="archive-footer">
+              <button class="btn-archive-all" onclick="archiveAll()">Archive all ${items.length} emails</button>
+            </div>
+          </div>
+        </div>`);
+    }
+  }
+
+  // FYI
+  if (result.fyi?.length) {
+    parts.push(`
+      <div class="section">
+        <div class="section-title">ℹ️ FYI — no action needed (${result.fyi.length})</div>
+        <div class="fyi-list">
+          ${result.fyi.map(item => `
+            <div class="fyi-item" id="fyi-${item.threadId}">
+              <span class="fyi-from">${esc(item.from)}</span>
+              <div class="fyi-body">
+                <div class="subject">${esc(item.subject)}</div>
+                <div class="summary-text">${esc(item.summary)}</div>
+              </div>
+              <button class="btn-archive-one" onclick="archiveOne('${item.threadId}')">Archive</button>
             </div>`).join('')}
         </div>
-        <div class="email-actions-row">
-          <button id="readbtn-${t.threadId}" class="btn-action" onclick="toggleMessageBody('${t.messageId}','${t.threadId}')">👁 Read</button>
-          <button class="btn-action reply"   onclick="showReply('${t.threadId}')">↩ Reply</button>
-          <button class="btn-action archive" onclick="archiveThread('${t.threadId}')">📦 Archive</button>
-        </div>
-        <div id="compose-${t.threadId}" class="compose-area" style="display:none">
-          <div class="compose-to">To: ${esc(sender.email)} &nbsp;·&nbsp; ${reSubject}</div>
-          <textarea class="compose-body" id="draft-body-${t.threadId}"></textarea>
-          <div class="compose-footer">
-            <button class="btn-send" onclick="sendDraft('${t.threadId}')">Save Draft to Gmail</button>
-            <button class="btn-cancel" onclick="cancelReply('${t.threadId}')">Cancel</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
+      </div>`);
+  }
 
-    group.innerHTML = `
-      <div class="sender-header">
-        <div class="sender-avatar" style="background:${avatarColor(sender.email)}">${initials(sender.name)}</div>
-        <div class="sender-info">
-          <div class="sender-name">${esc(sender.name)}</div>
-          <div class="sender-email">${esc(sender.email)}</div>
-        </div>
-        <div class="sender-badges">
-          ${priorityBadge(sender.priority)}
-          ${hasDraft ? '<span class="badge draft">✉️ Draft Ready</span>' : ''}
-          <span class="badge count">${sender.threads.length} email${sender.threads.length !== 1 ? 's' : ''}</span>
-        </div>
-        <span class="chevron">▶</span>
+  body.innerHTML = parts.join('');
+
+  // Set draft textarea values safely (avoids HTML entity issues)
+  (result.priority || []).forEach(item => {
+    const ta = document.getElementById('ta-' + item.threadId);
+    if (ta) ta.value = item.draft || '';
+  });
+}
+
+function renderPriorityCard(item) {
+  return `
+    <div class="priority-card ${item.urgency || 'medium'}" id="pc-${item.threadId}">
+      <div class="pc-top">
+        <span class="pc-urgency ${item.urgency || 'medium'}">${item.urgency === 'high' ? '🔴 High priority' : '🟡 Needs reply'}</span>
+        <div class="pc-from">${esc(item.from)}</div>
+        <div class="pc-subject">${esc(item.subject)}</div>
+        <div class="pc-summary">${esc(item.summary)}</div>
       </div>
-      <div class="email-list">${emailsHtml}</div>`;
+      <div class="draft-section">
+        <div class="draft-label">✉️ Draft reply</div>
+        <textarea class="draft-textarea" id="ta-${item.threadId}"></textarea>
+        <div class="draft-footer">
+          <button class="btn-send" onclick="sendDraft('${item.threadId}')">Save to Drafts</button>
+          <button class="btn-dismiss" onclick="dismissCard('pc-${item.threadId}')">Dismiss</button>
+        </div>
+      </div>
+    </div>`;
+}
 
-    // Populate textarea values (safe from HTML injection)
-    sender.threads.forEach(t => {
-      const ta = group.querySelector('#draft-body-' + t.threadId);
-      if (ta) ta.value = draftBodies[t.threadId] || '';
-    });
+// ── Actions ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-    group.querySelector('.sender-header').addEventListener('click', e => {
-      // Don't toggle if clicking action buttons inside the header area
-      if (e.target.closest('.btn-action')) return;
-      group.classList.toggle('open');
-    });
-    content.appendChild(group);
+async function sendDraft(threadId) {
+  const ta  = document.getElementById('ta-' + threadId);
+  const btn = document.querySelector(`#pc-${threadId} .btn-send`);
+  if (!ta || !btn) return;
+
+  const body    = ta.value.trim();
+  const email   = briefingData?.emailData?.find(e => e.threadId === threadId);
+  if (!email) return;
+
+  const subject = email.subject.startsWith('Re:') ? email.subject : 'Re: ' + email.subject;
+  const rawMsg  = [
+    `To: ${email.fromEmail}`,
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    '', body
+  ].join('\r\n');
+  const encoded = btoa(unescape(encodeURIComponent(rawMsg)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+  btn.textContent = 'Saving…';
+  btn.disabled    = true;
+  try {
+    await gmailPost('drafts', { message: { threadId, raw: encoded } });
+    const card = document.getElementById('pc-' + threadId);
+    if (card) card.innerHTML = '<div class="card-done">✅ Draft saved — open Gmail to review and send.</div>';
+    setTimeout(() => dismissCard('pc-' + threadId), 2500);
+  } catch(e) {
+    btn.textContent = 'Save to Drafts';
+    btn.disabled    = false;
+    alert('Failed to save draft: ' + e.message);
+  }
+}
+
+function dismissCard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transition = 'opacity .35s, max-height .35s, margin .35s';
+  el.style.overflow   = 'hidden';
+  el.style.maxHeight  = el.scrollHeight + 'px';
+  el.style.opacity    = '1';
+  requestAnimationFrame(() => {
+    el.style.opacity   = '0';
+    el.style.maxHeight = '0';
+    el.style.marginBottom = '0';
+    setTimeout(() => el.remove(), 380);
   });
 }
 
-function updateStats() {
-  const urgentCount  = allSenders.filter(s => s.priority === 'urgent').length;
-  const totalActions = allSenders.reduce((n,s) => n + s.threads.reduce((m,t) => m + (t.actions||[]).length, 0), 0);
-  const draftCount   = allSenders.reduce((n,s) => n + s.threads.filter(t => t.hasDraft).length, 0);
-  document.getElementById('statUrgent').textContent  = urgentCount;
-  document.getElementById('statAction').textContent  = totalActions;
-  document.getElementById('statSenders').textContent = allSenders.length;
-  document.getElementById('statDrafts').textContent  = draftCount;
+async function archiveOne(threadId) {
+  try {
+    await gmailPost(`threads/${threadId}/modify`, { removeLabelIds: ['INBOX'] });
+    ['ai-', 'fyi-', 'pc-'].forEach(prefix => dismissCard(prefix + threadId));
+    archiveQueue = archiveQueue.filter(id => id !== threadId);
+  } catch(e) { alert('Archive failed: ' + e.message); }
 }
 
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = btn.dataset.filter;
-    renderGroups();
-  });
-});
-
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function show(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-function parseSender(raw) {
-  const m = raw.match(/^(.+?)\s*<([^>]+)>/);
-  if (m) return { name: m[1].replace(/"/g,'').trim(), email: m[2].trim() };
-  return { name: raw.split('@')[0], email: raw };
-}
-function initials(n) { return n.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
-function avatarColor(e) { let h=0; for(const c of e) h=(h*31+c.charCodeAt(0))&0xffffffff; return COLORS[Math.abs(h)%COLORS.length]; }
-function fmtDate(ms) {
-  if (!ms) return '';
-  const d = new Date(ms), diff = Math.floor((Date.now()-ms)/86400000);
-  if (diff===0) return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  if (diff<7)   return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function priorityBadge(p) {
-  if (p==='urgent') return '<span class="badge urgent">🔴 Urgent</span>';
-  if (p==='action') return '<span class="badge action">🔵 Action Needed</span>';
-  return '<span class="badge info">⚪ Info</span>';
+async function archiveAll() {
+  const btn = document.querySelector('.btn-archive-all');
+  if (btn) { btn.textContent = 'Archiving…'; btn.disabled = true; }
+  try {
+    await Promise.all(archiveQueue.map(id =>
+      gmailPost(`threads/${id}/modify`, { removeLabelIds: ['INBOX'] })
+    ));
+    dismissCard('archive-section');
+    archiveQueue = [];
+  } catch(e) {
+    if (btn) { btn.textContent = `Archive all emails`; btn.disabled = false; }
+    alert('Archive failed: ' + e.message);
+  }
 }
 </script>
 </body>
