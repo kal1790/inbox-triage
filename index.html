@@ -241,6 +241,19 @@
   .action-item.info   { background: var(--grey-bg);   border-left: 3px solid var(--text4);  color: var(--text3); }
   .action-icon { flex-shrink: 0; margin-top: 1px; }
 
+  /* ── Message body ── */
+  .message-body-wrap {
+    margin-top: 10px; border: 1px solid var(--border2); border-radius: 10px;
+    overflow: hidden; background: var(--surface2);
+  }
+  .message-body-text {
+    padding: 12px 14px; font-size: 12.5px; line-height: 1.65; color: var(--text2);
+    white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto;
+  }
+  .message-loading {
+    padding: 12px 14px; font-size: 12px; color: var(--text4); font-style: italic;
+  }
+
   /* ── Email action buttons ── */
   .email-actions-row {
     display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
@@ -552,7 +565,8 @@
 
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SCOPES  = 'https://www.googleapis.com/auth/gmail.readonly';
+const SCOPES  = 'https://www.googleapis.com/auth/gmail.modify';
+const SCOPE_VER = 'v2'; // bump when scopes change to force re-auth
 const COLORS  = ['#1a73e8','#d93025','#188038','#7c3aed','#e65c00','#00897b','#c62828','#1565c0'];
 const P_RANK  = { info: 0, action: 1, urgent: 2 };
 
@@ -561,6 +575,7 @@ const LS_TOKEN    = 'inbox_triage_access_token';
 const LS_EXPIRY   = 'inbox_triage_token_expiry';
 const LS_DARK     = 'inbox_triage_dark';
 const LS_FILTERED = 'inbox_triage_filtered_senders';
+const LS_SCOPE_V  = 'inbox_triage_scope_ver';
 
 // Default filtered senders
 const DEFAULT_FILTERED = [
@@ -582,6 +597,13 @@ window.addEventListener('load', () => {
 
   const clientId = localStorage.getItem(LS_CLIENT);
   if (!clientId) { show('setupScreen'); return; }
+
+  // Force re-auth if scope version changed (e.g. upgraded from readonly to modify)
+  if (localStorage.getItem(LS_SCOPE_V) !== SCOPE_VER) {
+    localStorage.removeItem(LS_TOKEN);
+    localStorage.removeItem(LS_EXPIRY);
+    localStorage.setItem(LS_SCOPE_V, SCOPE_VER);
+  }
 
   const cached = localStorage.getItem(LS_TOKEN);
   const expiry = parseInt(localStorage.getItem(LS_EXPIRY) || '0', 10);
@@ -644,6 +666,7 @@ function handleToken(resp) {
   const expMs = Date.now() + ((resp.expires_in || 3600) - 120) * 1000;
   localStorage.setItem(LS_TOKEN, resp.access_token);
   localStorage.setItem(LS_EXPIRY, String(expMs));
+  localStorage.setItem(LS_SCOPE_V, SCOPE_VER);
   show('appScreen');
   loadInbox();
 }
@@ -775,6 +798,56 @@ function generateReplyDraft(data) {
   return body;
 }
 
+function extractBody(payload) {
+  if (!payload) return '';
+  const decode = (b64) => {
+    try { return decodeURIComponent(escape(atob(b64.replace(/-/g,'+').replace(/_/g,'/'))));
+    } catch { return ''; }
+  };
+  if (payload.mimeType === 'text/plain' && payload.body?.data) return decode(payload.body.data);
+  if (payload.parts) {
+    const plain = payload.parts.find(p => p.mimeType === 'text/plain');
+    if (plain?.body?.data) return decode(plain.body.data);
+    const html = payload.parts.find(p => p.mimeType === 'text/html');
+    if (html?.body?.data) {
+      const d = document.createElement('div');
+      d.innerHTML = decode(html.body.data);
+      return d.innerText || d.textContent || '';
+    }
+    for (const part of payload.parts) { const r = extractBody(part); if (r) return r; }
+  }
+  if (payload.body?.data) return decode(payload.body.data);
+  return '';
+}
+
+async function toggleMessageBody(messageId, threadId) {
+  const wrap = document.getElementById('msgbody-' + threadId);
+  const btn  = document.getElementById('readbtn-' + threadId);
+  if (!wrap) return;
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) {
+    wrap.style.display = 'none';
+    btn.textContent = '👁 Read';
+    return;
+  }
+  wrap.style.display = 'block';
+  if (wrap.dataset.loaded) { btn.textContent = 'Hide'; return; }
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+  wrap.innerHTML = '<div class="message-loading">Loading message…</div>';
+  try {
+    const msg = await gmailGet(`messages/${messageId}`, { format: 'full' });
+    const text = extractBody(msg.payload).trim();
+    wrap.innerHTML = `<div class="message-body-text">${esc(text || '(no content)')}</div>`;
+    wrap.dataset.loaded = 'true';
+    btn.textContent = 'Hide';
+  } catch(e) {
+    wrap.innerHTML = `<div class="message-loading">⚠️ ${esc(String(e))}</div>`;
+    btn.textContent = '👁 Read';
+  }
+  btn.disabled = false;
+}
+
 async function archiveThread(threadId) {
   const itemEl = document.getElementById('email-' + threadId);
   const archiveBtn = itemEl && itemEl.querySelector('.btn-action.archive');
@@ -899,6 +972,7 @@ async function loadInbox() {
       const parsed = parseSender(headers['From'] || '');
       return {
         threadId:    thread.id,
+        messageId:   msg.id,
         senderName:  parsed.name,
         senderEmail: parsed.email,
         subject:     headers['Subject'] || '(no subject)',
@@ -1001,7 +1075,7 @@ function renderGroups() {
     const draftBodies = {};
     const emailsHtml = sender.threads.map(t => {
       threadDataMap[t.threadId] = {
-        senderName: sender.name, senderEmail: sender.email,
+        senderName: sender.name, senderEmail: sender.email, messageId: t.messageId,
         subject: t.subject, snippet: t.snippet, actions: t.actions || []
       };
       draftBodies[t.threadId] = generateReplyDraft(threadDataMap[t.threadId]);
@@ -1013,6 +1087,7 @@ function renderGroups() {
           <span class="email-date">${fmtDate(t.dateMs)}</span>
         </div>
         <div class="email-snippet">${esc(t.snippet)}</div>
+        <div id="msgbody-${t.threadId}" class="message-body-wrap" style="display:none"></div>
         ${t.hasDraft ? `<div class="draft-banner">
           <div class="draft-icon">✉️</div>
           <div>
@@ -1027,6 +1102,7 @@ function renderGroups() {
             </div>`).join('')}
         </div>
         <div class="email-actions-row">
+          <button id="readbtn-${t.threadId}" class="btn-action" onclick="toggleMessageBody('${t.messageId}','${t.threadId}')">👁 Read</button>
           <button class="btn-action reply"   onclick="showReply('${t.threadId}')">↩ Reply</button>
           <button class="btn-action archive" onclick="archiveThread('${t.threadId}')">📦 Archive</button>
         </div>
