@@ -287,8 +287,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SCOPES    = 'https://www.googleapis.com/auth/gmail.modify';
-const SCOPE_VER = 'v4';
+const SCOPES    = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose';
+const SCOPE_VER = 'v5';
 const LS_CLIENT = 'ib2_client_id';
 const LS_GEMINI = 'ib2_gemini_key';
 const LS_TOKEN  = 'ib2_access_token';
@@ -681,7 +681,8 @@ function renderPriorityCard(item) {
         <div class="draft-label">✉️ Draft reply</div>
         <textarea class="draft-textarea" id="ta-${item.threadId}"></textarea>
         <div class="draft-footer">
-          <button class="btn-send" onclick="sendDraft('${item.threadId}')">Save to Drafts</button>
+          <button class="btn-send" id="btn-send-${item.threadId}" onclick="sendNow('${item.threadId}')">Send</button>
+          <button class="btn-dismiss" id="btn-draft-${item.threadId}" onclick="saveDraft('${item.threadId}')">Save Draft</button>
           <button class="btn-dismiss" onclick="dismissCard('pc-${item.threadId}')">Dismiss</button>
         </div>
       </div>
@@ -693,34 +694,61 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function sendDraft(threadId) {
-  const ta  = document.getElementById('ta-' + threadId);
-  const btn = document.querySelector(`#pc-${threadId} .btn-send`);
-  if (!ta || !btn) return;
-
-  const body    = ta.value.trim();
-  const email   = briefingData?.emailData?.find(e => e.threadId === threadId);
-  if (!email) return;
-
+function buildRawMessage(email, body) {
   const subject = email.subject.startsWith('Re:') ? email.subject : 'Re: ' + email.subject;
-  const rawMsg  = [
+  const raw = [
     `To: ${email.fromEmail}`,
     `Subject: ${subject}`,
     'Content-Type: text/plain; charset="UTF-8"',
     '', body
   ].join('\r\n');
-  const encoded = btoa(unescape(encodeURIComponent(rawMsg)))
+  return btoa(unescape(encodeURIComponent(raw)))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function sendNow(threadId) {
+  const ta  = document.getElementById('ta-' + threadId);
+  const btn = document.getElementById('btn-send-' + threadId);
+  if (!ta || !btn) return;
+  const body  = ta.value.trim();
+  const email = briefingData?.emailData?.find(e => e.threadId === threadId);
+  if (!email) return;
+
+  if (!confirm('Send this reply to ' + email.fromEmail + '?')) return;
+
+  btn.textContent = 'Sending…';
+  btn.disabled    = true;
+  document.getElementById('btn-draft-' + threadId).disabled = true;
+  try {
+    await gmailPost('messages/send', { threadId, raw: buildRawMessage(email, body) });
+    const card = document.getElementById('pc-' + threadId);
+    if (card) card.innerHTML = '<div class="card-done">✅ Sent!</div>';
+    setTimeout(() => dismissCard('pc-' + threadId), 2000);
+  } catch(e) {
+    btn.textContent = 'Send';
+    btn.disabled    = false;
+    document.getElementById('btn-draft-' + threadId).disabled = false;
+    alert('Failed to send: ' + e.message);
+  }
+}
+
+async function saveDraft(threadId) {
+  const ta  = document.getElementById('ta-' + threadId);
+  const btn = document.getElementById('btn-draft-' + threadId);
+  if (!ta || !btn) return;
+  const body  = ta.value.trim();
+  const email = briefingData?.emailData?.find(e => e.threadId === threadId);
+  if (!email) return;
 
   btn.textContent = 'Saving…';
   btn.disabled    = true;
   try {
-    await gmailPost('drafts', { message: { threadId, raw: encoded } });
+    await gmailPost('drafts', { message: { threadId, raw: buildRawMessage(email, body) } });
     const card = document.getElementById('pc-' + threadId);
     if (card) card.innerHTML = '<div class="card-done">✅ Draft saved — open Gmail to review and send.</div>';
     setTimeout(() => dismissCard('pc-' + threadId), 2500);
   } catch(e) {
-    btn.textContent = 'Save to Drafts';
+    btn.textContent = 'Save Draft';
     btn.disabled    = false;
     alert('Failed to save draft: ' + e.message);
   }
