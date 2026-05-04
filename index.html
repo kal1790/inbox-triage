@@ -332,14 +332,60 @@
   }
   .no-results { text-align: center; color: var(--text4); padding: 40px 20px; font-size: 14px; }
 
-  @media (max-width: 480px) {
+  @media (max-width: 600px) {
+    /* App layout */
     #appScreen { padding: 12px; }
-    .stat-card .num { font-size: 22px; }
-    .auth-card { padding: 28px 20px; }
+    .auth-card { padding: 24px 16px; }
+
+    /* Header: stack on mobile */
+    .app-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .header-right { width: 100%; justify-content: space-between; }
+    .meta { flex: 1; }
+
+    /* Stats: 2x2 grid */
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { min-width: 0; padding: 12px 10px; }
+    .stat-card .num { font-size: 26px; }
+    .stat-card .label { font-size: 10px; }
+
+    /* Filter bar: scrollable single row */
+    .filter-bar {
+      display: flex; flex-wrap: nowrap; overflow-x: auto;
+      gap: 8px; padding-bottom: 4px; margin-bottom: 16px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn { flex-shrink: 0; white-space: nowrap; padding: 8px 14px; }
+
+    /* Sender group */
+    .sender-header { padding: 12px 14px; gap: 10px; }
+    .sender-avatar { width: 34px; height: 34px; font-size: 14px; }
+    .sender-name { font-size: 13px; }
     .sender-badges .badge.action,
     .sender-badges .badge.urgent,
     .sender-badges .badge.info { display: none; }
-    .settings-panel { width: 100vw; }
+    .sender-badges { gap: 4px; }
+
+    /* Email items */
+    .email-item { padding: 12px 14px; }
+    .email-subject { font-size: 13px; flex-direction: column; gap: 3px; }
+    .email-date { margin-left: 0; }
+    .email-snippet { font-size: 12px; margin-bottom: 8px; }
+    .action-item { padding: 8px 10px; font-size: 12px; }
+
+    /* Settings panel: bottom sheet on mobile */
+    .settings-panel {
+      width: 100vw; top: auto; bottom: -100vh; right: 0; height: 80vh;
+      border-radius: 20px 20px 0 0;
+      transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .settings-panel.open { bottom: 0; right: 0; }
+
+    /* Bigger touch targets */
+    .btn-icon { width: 40px; height: 40px; }
+    .btn-small { padding: 8px 16px; }
+    .google-btn { padding: 14px 20px; }
+    .btn-primary { padding: 14px; }
   }
 </style>
 </head>
