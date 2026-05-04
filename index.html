@@ -241,6 +241,52 @@
   .action-item.info   { background: var(--grey-bg);   border-left: 3px solid var(--text4);  color: var(--text3); }
   .action-icon { flex-shrink: 0; margin-top: 1px; }
 
+  /* ── Email action buttons ── */
+  .email-actions-row {
+    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .btn-action {
+    padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border2); background: var(--surface2);
+    color: var(--text2); transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-action.reply:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn-action.archive:hover { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-action.archiving { opacity: 0.5; cursor: default; }
+
+  /* ── Inline compose ── */
+  .compose-area {
+    margin-top: 12px; border: 1px solid var(--border2); border-radius: 10px;
+    overflow: hidden; background: var(--surface);
+  }
+  .compose-to {
+    padding: 8px 12px; font-size: 12px; color: var(--text3);
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+  }
+  .compose-body {
+    width: 100%; padding: 12px; font-size: 13px; line-height: 1.6;
+    color: var(--text); background: var(--surface); border: none; outline: none;
+    resize: vertical; min-height: 130px; font-family: inherit; box-sizing: border-box;
+  }
+  .compose-footer {
+    display: flex; gap: 8px; padding: 10px 12px;
+    border-top: 1px solid var(--border); background: var(--surface2);
+  }
+  .btn-send {
+    padding: 7px 18px; border-radius: 8px; background: var(--blue); color: #fff;
+    border: none; cursor: pointer; font-size: 13px; font-weight: 500;
+  }
+  .btn-send:hover { opacity: 0.85; }
+  .btn-send:disabled { opacity: 0.5; cursor: default; }
+  .btn-cancel {
+    padding: 7px 14px; border-radius: 8px; background: none; color: var(--text3);
+    border: 1px solid var(--border2); cursor: pointer; font-size: 13px;
+  }
+  .compose-saved {
+    padding: 12px; color: var(--green); font-size: 13px; font-weight: 500;
+    background: var(--green-bg); text-align: center;
+  }
+
   /* ── Settings panel ── */
   .settings-overlay {
     display: none; position: fixed; inset: 0; background: var(--overlay); z-index: 100;
@@ -698,6 +744,112 @@ async function gmailGet(path, params = {}) {
   return resp.json();
 }
 
+async function gmailPost(path, body) {
+  const resp = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (resp.status === 401) { tokenClient.requestAccessToken({ prompt: '' }); throw new Error('Session expired — reconnecting.'); }
+  if (!resp.ok) throw new Error(`Gmail API error ${resp.status}`);
+  return resp.json();
+}
+
+// ── Thread data map (for compose) ─────────────────────────────────────────────
+const threadDataMap = {};
+
+function generateReplyDraft(data) {
+  const firstName = (data.senderName || 'there').split(/[\s,]+/)[0];
+  const actions   = data.actions || [];
+  let body = `Hi ${firstName},\n\n`;
+  if (actions.length > 0) {
+    body += `Thanks for your message. `;
+    const hint = actions[0].text.replace(/^(action|do|review|respond|urgent)[:\-\s]*/i, '').toLowerCase();
+    body += `I wanted to follow up regarding ${hint}.\n\n[Your response here]\n\n`;
+  } else if (data.snippet) {
+    body += `Thanks for your email.\n\n[Your response here]\n\n`;
+  } else {
+    body += `[Your response here]\n\n`;
+  }
+  body += `Best,\n[Your name]`;
+  return body;
+}
+
+async function archiveThread(threadId) {
+  const itemEl = document.getElementById('email-' + threadId);
+  const archiveBtn = itemEl && itemEl.querySelector('.btn-action.archive');
+  if (!itemEl || !archiveBtn) return;
+  archiveBtn.textContent = '⏳ Archiving…';
+  archiveBtn.classList.add('archiving');
+  try {
+    await gmailPost(`threads/${threadId}/modify`, { removeLabelIds: ['INBOX'] });
+    itemEl.style.transition = 'opacity 0.35s, max-height 0.35s';
+    itemEl.style.overflow   = 'hidden';
+    itemEl.style.opacity    = '0';
+    itemEl.style.maxHeight  = itemEl.offsetHeight + 'px';
+    setTimeout(() => { itemEl.style.maxHeight = '0'; itemEl.style.padding = '0'; }, 10);
+    setTimeout(() => {
+      itemEl.remove();
+      // Remove sender group if now empty
+      const emailList = document.querySelector(`.email-list`);
+      allSenders.forEach((s, si) => {
+        const ti = s.threads.findIndex(t => t.threadId === threadId);
+        if (ti !== -1) { s.threads.splice(ti, 1); if (s.threads.length === 0) allSenders.splice(si, 1); }
+      });
+      updateStats();
+    }, 360);
+  } catch(e) {
+    archiveBtn.textContent = '📦 Archive';
+    archiveBtn.classList.remove('archiving');
+    alert('Archive failed: ' + e.message);
+  }
+}
+
+function showReply(threadId) {
+  const compose = document.getElementById('compose-' + threadId);
+  if (!compose) return;
+  const isOpen = compose.style.display !== 'none';
+  compose.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) compose.querySelector('.compose-body').focus();
+}
+
+function cancelReply(threadId) {
+  const compose = document.getElementById('compose-' + threadId);
+  if (compose) compose.style.display = 'none';
+}
+
+async function sendDraft(threadId) {
+  const compose = document.getElementById('compose-' + threadId);
+  if (!compose) return;
+  const textarea = compose.querySelector('.compose-body');
+  const btn      = compose.querySelector('.btn-send');
+  const data     = threadDataMap[threadId];
+  if (!data || !textarea) return;
+
+  const body    = textarea.value.trim();
+  const subject = data.subject.startsWith('Re:') ? data.subject : 'Re: ' + data.subject;
+  const rawMsg  = [`To: ${data.senderEmail}`, `Subject: ${subject}`,
+    `Content-Type: text/plain; charset="UTF-8"`, `In-Reply-To: <${threadId}>`,
+    `References: <${threadId}>`, '', body].join('\r\n');
+  const encoded = btoa(unescape(encodeURIComponent(rawMsg)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  btn.textContent = 'Saving…';
+  btn.disabled    = true;
+  try {
+    await gmailPost('drafts', { message: { threadId, raw: encoded } });
+    compose.innerHTML = '<div class="compose-saved">✅ Draft saved to Gmail — open Gmail to review &amp; send.</div>';
+    setTimeout(() => { compose.style.display = 'none'; }, 3000);
+    // Mark thread as having a draft
+    allSenders.forEach(s => s.threads.forEach(t => { if (t.threadId === threadId) t.hasDraft = true; }));
+    updateStats();
+  } catch(e) {
+    btn.textContent = 'Save Draft';
+    btn.disabled    = false;
+    alert('Failed to save draft: ' + e.message);
+  }
+}
+
 // ── Load inbox ────────────────────────────────────────────────────────────────
 async function loadInbox() {
   document.getElementById('content').innerHTML = `
@@ -846,8 +998,16 @@ function renderGroups() {
     const group = document.createElement('div');
     group.className = 'sender-group' + (i === 0 ? ' open' : '');
 
-    const emailsHtml = sender.threads.map(t => `
-      <div class="email-item">
+    const draftBodies = {};
+    const emailsHtml = sender.threads.map(t => {
+      threadDataMap[t.threadId] = {
+        senderName: sender.name, senderEmail: sender.email,
+        subject: t.subject, snippet: t.snippet, actions: t.actions || []
+      };
+      draftBodies[t.threadId] = generateReplyDraft(threadDataMap[t.threadId]);
+      const reSubject = t.subject.startsWith('Re:') ? esc(t.subject) : 'Re: ' + esc(t.subject);
+      return `
+      <div class="email-item" id="email-${t.threadId}">
         <div class="email-subject">
           <span>${esc(t.subject)}</span>
           <span class="email-date">${fmtDate(t.dateMs)}</span>
@@ -866,7 +1026,20 @@ function renderGroups() {
               <span>${esc(a.text)}</span>
             </div>`).join('')}
         </div>
-      </div>`).join('');
+        <div class="email-actions-row">
+          <button class="btn-action reply"   onclick="showReply('${t.threadId}')">↩ Reply</button>
+          <button class="btn-action archive" onclick="archiveThread('${t.threadId}')">📦 Archive</button>
+        </div>
+        <div id="compose-${t.threadId}" class="compose-area" style="display:none">
+          <div class="compose-to">To: ${esc(sender.email)} &nbsp;·&nbsp; ${reSubject}</div>
+          <textarea class="compose-body" id="draft-body-${t.threadId}"></textarea>
+          <div class="compose-footer">
+            <button class="btn-send" onclick="sendDraft('${t.threadId}')">Save Draft to Gmail</button>
+            <button class="btn-cancel" onclick="cancelReply('${t.threadId}')">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
 
     group.innerHTML = `
       <div class="sender-header">
@@ -884,9 +1057,17 @@ function renderGroups() {
       </div>
       <div class="email-list">${emailsHtml}</div>`;
 
-    group.querySelector('.sender-header').addEventListener('click', () =>
-      group.classList.toggle('open')
-    );
+    // Populate textarea values (safe from HTML injection)
+    sender.threads.forEach(t => {
+      const ta = group.querySelector('#draft-body-' + t.threadId);
+      if (ta) ta.value = draftBodies[t.threadId] || '';
+    });
+
+    group.querySelector('.sender-header').addEventListener('click', e => {
+      // Don't toggle if clicking action buttons inside the header area
+      if (e.target.closest('.btn-action')) return;
+      group.classList.toggle('open');
+    });
     content.appendChild(group);
   });
 }
