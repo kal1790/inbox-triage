@@ -463,7 +463,8 @@
 
       <div class="setting-section">
         <h3>Account</h3>
-        <button class="btn-small" onclick="signOut()" style="width:100%;text-align:center;padding:10px">Sign out</button>
+        <button class="btn-small" onclick="switchAccount()" style="width:100%;text-align:center;padding:10px;margin-bottom:8px">Switch Account</button>
+        <button class="btn-small" onclick="signOut()" style="width:100%;text-align:center;padding:10px;background:var(--red-bg);color:var(--red);border-color:var(--red)">Sign out</button>
         <div class="setup-link" onclick="showSetup()" style="margin-top:10px;display:block">Change Client ID</div>
       </div>
 
@@ -580,7 +581,15 @@ function saveClientId() {
 }
 
 function requestToken() {
-  if (tokenClient) tokenClient.requestAccessToken({ prompt: '' });
+  if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' });
+}
+
+function switchAccount() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken = null;
+  localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_EXPIRY);
+  if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 function handleToken(resp) {
