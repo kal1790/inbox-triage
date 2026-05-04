@@ -210,6 +210,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 .error-card button { margin-top: 12px; padding: 8px 18px; background: var(--red);
   color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
 
+/* ── Undo toast ── */
+.undo-toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: #1d1d1f; color: #f2f2f7; padding: 12px 18px;
+  border-radius: 12px; display: flex; align-items: center; gap: 12px;
+  font-size: 14px; box-shadow: 0 4px 24px rgba(0,0,0,.35); z-index: 300;
+  opacity: 0; pointer-events: none; transition: opacity .2s; white-space: nowrap;
+}
+.undo-toast.show { opacity: 1; pointer-events: all; }
+.undo-toast .undo-btn { background: none; border: 1px solid rgba(255,255,255,.35);
+  color: #f2f2f7; padding: 5px 14px; border-radius: 7px; cursor: pointer;
+  font-size: 13px; font-weight: 600; }
+.undo-toast .undo-btn:hover { background: rgba(255,255,255,.12); }
+.undo-secs { font-size: 12px; color: rgba(255,255,255,.4); min-width: 18px; text-align: right; }
+
 /* ── Mobile ── */
 @media (max-width: 600px) {
   .briefing-header { padding: 14px 16px; flex-wrap: wrap; }
@@ -299,8 +314,75 @@ const LS_DARK   = 'ib2_dark';
 let accessToken  = null;
 let geminiKey    = null;
 let tokenClient  = null;
-let briefingData = null;   // { emailData[], result{} }
-let archiveQueue = [];     // threadIds queued for batch archive
+let briefingData = null;
+let archiveQueue = [];
+
+// ── Dismissed memory ──────────────────────────────────────────────────────────
+const LS_DISMISSED = 'ib2_dismissed';
+const DISMISS_TTL  = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function getDismissed() {
+  try {
+    const raw  = JSON.parse(localStorage.getItem(LS_DISMISSED) || '{}');
+    const cut  = Date.now() - DISMISS_TTL;
+    const out  = {};
+    Object.entries(raw).forEach(([id, ts]) => { if (ts > cut) out[id] = ts; });
+    return out;
+  } catch { return {}; }
+}
+function rememberDismissed(...ids) {
+  const data = getDismissed();
+  ids.forEach(id => { data[id] = Date.now(); });
+  localStorage.setItem(LS_DISMISSED, JSON.stringify(data));
+}
+function forgetDismissed(...ids) {
+  const data = getDismissed();
+  ids.forEach(id => delete data[id]);
+  localStorage.setItem(LS_DISMISSED, JSON.stringify(data));
+}
+
+// ── Undo toast ────────────────────────────────────────────────────────────────
+let _undoTimer = null; let _undoInterval = null;
+
+function showUndo(message, undoFn) {
+  clearTimeout(_undoTimer); clearInterval(_undoInterval);
+  const toast = document.getElementById('undoToast');
+  const secsEl = document.getElementById('undoSecs');
+  document.getElementById('undoMsg').textContent = message;
+  let s = 10;
+  secsEl.textContent = s;
+  toast.classList.add('show');
+  _undoInterval = setInterval(() => { secsEl.textContent = --s; }, 1000);
+  _undoTimer    = setTimeout(() => { toast.classList.remove('show'); clearInterval(_undoInterval); }, 10000);
+  document.getElementById('undoBtn').onclick = () => {
+    clearTimeout(_undoTimer); clearInterval(_undoInterval);
+    toast.classList.remove('show');
+    undoFn();
+  };
+}
+
+// ── Animate element out of DOM ────────────────────────────────────────────────
+function animateOut(el, onDone) {
+  if (!el) return;
+  el.style.transition = 'opacity .22s';
+  el.style.opacity    = '0';
+  setTimeout(() => {
+    el.style.transition   = 'max-height .28s ease, margin-bottom .28s ease';
+    el.style.overflow     = 'hidden';
+    el.style.maxHeight    = el.offsetHeight + 'px';
+    requestAnimationFrame(() => {
+      el.style.maxHeight    = '0';
+      el.style.marginBottom = '0';
+      setTimeout(() => { el.remove(); if (onDone) onDone(); }, 290);
+    });
+  }, 230);
+}
+
+function animateIn(el) {
+  el.style.opacity    = '0';
+  el.style.transition = 'opacity .25s';
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.onload = () => {
@@ -598,6 +680,11 @@ function renderBriefing(result, emailData) {
   show('briefingScreen');
   updateHeader(emailData.length);
 
+  const dismissed = getDismissed();
+  result.priority = (result.priority || []).filter(i => !dismissed[i.threadId]);
+  result.archive  = (result.archive  || []).filter(id => !dismissed[id]);
+  result.fyi      = (result.fyi      || []).filter(i => !dismissed[i.threadId]);
+
   const emailMap = {};
   emailData.forEach(e => { emailMap[e.threadId] = e; });
 
@@ -683,7 +770,7 @@ function renderPriorityCard(item) {
         <div class="draft-footer">
           <button class="btn-send" id="btn-send-${item.threadId}" onclick="sendNow('${item.threadId}')">Send</button>
           <button class="btn-dismiss" id="btn-draft-${item.threadId}" onclick="saveDraft('${item.threadId}')">Save Draft</button>
-          <button class="btn-dismiss" onclick="dismissCard('pc-${item.threadId}')">Dismiss</button>
+          <button class="btn-dismiss" onclick="dismissCard('pc-${item.threadId}','${item.threadId}')">Dismiss</button>
         </div>
       </div>
     </div>`;
@@ -754,43 +841,80 @@ async function saveDraft(threadId) {
   }
 }
 
-function dismissCard(id) {
-  const el = document.getElementById(id);
+function dismissCard(cardId, threadId) {
+  const el = document.getElementById(cardId);
   if (!el) return;
-  el.style.transition = 'opacity .35s, max-height .35s, margin .35s';
-  el.style.overflow   = 'hidden';
-  el.style.maxHeight  = el.scrollHeight + 'px';
-  el.style.opacity    = '1';
-  requestAnimationFrame(() => {
-    el.style.opacity   = '0';
-    el.style.maxHeight = '0';
-    el.style.marginBottom = '0';
-    setTimeout(() => el.remove(), 380);
-  });
+  const parent  = el.parentElement;
+  const nextSib = el.nextElementSibling;
+  const html    = el.outerHTML;
+
+  if (threadId) rememberDismissed(threadId);
+  animateOut(el);
+
+  if (threadId) {
+    showUndo('Dismissed', () => {
+      forgetDismissed(threadId);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const restored = tmp.firstChild;
+      if (parent) {
+        if (nextSib && nextSib.parentElement === parent) parent.insertBefore(restored, nextSib);
+        else parent.appendChild(restored);
+      }
+      const ta = document.getElementById('ta-' + threadId);
+      if (ta && briefingData?.result?.priority) {
+        const item = briefingData.result.priority.find(p => p.threadId === threadId);
+        if (item) ta.value = item.draft || '';
+      }
+      animateIn(restored);
+    });
+  }
 }
 
 async function archiveOne(threadId) {
+  const els = ['ai-','fyi-','pc-'].map(p => document.getElementById(p + threadId)).filter(Boolean);
   try {
     await gmailPost(`threads/${threadId}/modify`, { removeLabelIds: ['INBOX'] });
-    ['ai-', 'fyi-', 'pc-'].forEach(prefix => dismissCard(prefix + threadId));
+    rememberDismissed(threadId);
+    els.forEach(el => animateOut(el));
     archiveQueue = archiveQueue.filter(id => id !== threadId);
+    showUndo('Archived', async () => {
+      forgetDismissed(threadId);
+      try {
+        await gmailPost(`threads/${threadId}/modify`, { addLabelIds: ['INBOX'] });
+        showUndo('Moved back to inbox — refresh to see it', () => {});
+      } catch(e) { alert('Undo failed: ' + e.message); }
+    });
   } catch(e) { alert('Archive failed: ' + e.message); }
 }
 
 async function archiveAll() {
   const btn = document.querySelector('.btn-archive-all');
   if (btn) { btn.textContent = 'Archiving…'; btn.disabled = true; }
+  const ids = [...archiveQueue];
   try {
-    await Promise.all(archiveQueue.map(id =>
-      gmailPost(`threads/${id}/modify`, { removeLabelIds: ['INBOX'] })
-    ));
-    dismissCard('archive-section');
+    await Promise.all(ids.map(id => gmailPost(`threads/${id}/modify`, { removeLabelIds: ['INBOX'] })));
+    rememberDismissed(...ids);
+    animateOut(document.getElementById('archive-section'));
     archiveQueue = [];
+    showUndo(`Archived ${ids.length} emails`, async () => {
+      forgetDismissed(...ids);
+      try {
+        await Promise.all(ids.map(id => gmailPost(`threads/${id}/modify`, { addLabelIds: ['INBOX'] })));
+        showUndo('Moved back to inbox — refresh to see them', () => {});
+      } catch(e) { alert('Undo failed: ' + e.message); }
+    });
   } catch(e) {
-    if (btn) { btn.textContent = `Archive all emails`; btn.disabled = false; }
+    if (btn) { btn.textContent = 'Archive all emails'; btn.disabled = false; }
     alert('Archive failed: ' + e.message);
   }
 }
 </script>
+
+<div id="undoToast" class="undo-toast">
+  <span id="undoMsg">Done</span>
+  <button class="undo-btn" id="undoBtn">Undo</button>
+  <span class="undo-secs" id="undoSecs">10</span>
+</div>
 </body>
 </html>
